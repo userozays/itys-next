@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1794385627465,
+      "tag": "0000_open_energizer",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794386391963,
+      "tag": "0001_mean_wendell_rand",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794387701963,
+      "tag": "0002_smooth_jack_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794388674904,
+      "tag": "0003_chubby_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794389159912,
+      "tag": "0004_futuristic_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794390353475,
+      "tag": "0005_abandoned_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794391444257,
+      "tag": "0006_worthless_vengeance",
+      "breakpoints": true
+    }
+  ]
+}
