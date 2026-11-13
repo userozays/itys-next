@@ -26,7 +26,7 @@ export function LicenseForm({ license }: { license?: LicenseFormValues }) {
   const { state, pending, onSubmit } = useFormAction(saveLicenseAction);
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       {license ? <input type="hidden" name="id" value={license.id} /> : null}
       <FormError state={state} />
 

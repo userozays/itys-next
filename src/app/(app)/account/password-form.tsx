@@ -10,7 +10,7 @@ export function PasswordForm() {
   const { state, pending, onSubmit } = useFormAction(changePasswordAction);
 
   return (
-    <form onSubmit={onSubmit} className="grid max-w-sm gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid max-w-sm gap-4">
       <FormError state={state} />
       {state.ok ? (
         <p role="status" className="rounded-lg bg-muted px-3 py-2 text-sm">

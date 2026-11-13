@@ -13,6 +13,9 @@ export const companies = sqliteTable("companies", {
   phone: text("phone"),
   notes: text("notes"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  /** The highest D-NNNN device tag ever issued here. Only goes up, so a deleted
+   *  device's number is never reused and an old printed label cannot point at a new device. */
+  tagSeq: integer("tag_seq").notNull().default(0),
   createdAt: createdAt(),
 });
 

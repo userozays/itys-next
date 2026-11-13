@@ -49,7 +49,7 @@
     "signIn": "Giriş yap",
     "signingIn": "Giriş yapılıyor…",
     "invalid": "Kullanıcı adı ya da parola hatalı.",
-    "locked": "Çok fazla hatalı deneme. 15 dakika sonra tekrar dene.",
+    "locked": "Çok fazla hatalı deneme. {minutes, plural, other {# dakika}} sonra tekrar dene.",
     "setupTitle": "İlk kurulum",
     "setupDescription": "Sistemi kullanmaya başlamak için ilk yönetici hesabını oluştur.",
     "name": "Ad soyad",

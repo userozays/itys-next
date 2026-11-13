@@ -109,7 +109,8 @@ test("removing an assignment frees the seat", async ({ page }) => {
   await openLicense(page, "Microsoft 365");
   await page.getByRole("button", { name: "Atamayı kaldır: Satış Dizüstü" }).click();
   await expect(page.getByText("1 cihaz")).toBeVisible();
-  expect(await optionsOf(page, "Cihaza ata")).toEqual(["Satış Dizüstü (D-0002)"]);
+  // D-0002 belonged to a device deleted in 02; its number is not given out again.
+  expect(await optionsOf(page, "Cihaza ata")).toEqual(["Satış Dizüstü (D-0003)"]);
 });
 
 test("admin adds a license in the other company", async ({ page }) => {

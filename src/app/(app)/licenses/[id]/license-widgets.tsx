@@ -79,7 +79,7 @@ export function AssignForm({ licenseId, options }: { licenseId: number; options:
   if (options.length === 0) return <p className="text-sm text-muted-foreground">{t("noFreeDevices")}</p>;
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-2">
+    <form method="post" onSubmit={onSubmit} className="grid gap-2">
       <FormError state={state} />
       <div className="flex gap-2">
         <SelectBox

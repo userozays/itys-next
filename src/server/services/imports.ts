@@ -137,7 +137,12 @@ export function runImport(db: Db, actor: Actor, jobId: number): { imported: numb
         .all()
         .map((l) => [fold(l.name), l.id]),
     );
-    const nextTag = tagAllocator(tx, job.companyId);
+    // Tags written in the file are reserved, so a generated tag cannot collide with a later row.
+    const nextTag = tagAllocator(
+      tx,
+      job.companyId,
+      valid.flatMap(({ value }) => (value.input.tag ? [value.input.tag] : [])),
+    );
 
     for (const { value } of valid) {
       let locationId: number | null = null;

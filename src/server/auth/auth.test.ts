@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { sessions } from "../db/schema";
 import { addUser, PASSWORD, testDb } from "../testing/fixtures";
-import { login } from "./login";
+import { pickClientIp } from "./client-ip";
+import { LIMITS, login } from "./login";
 import { hashPassword, verifyPassword } from "./password";
 import { createSession, deleteSession, getSessionActor } from "./sessions";
 import { updateUser } from "../services/users";
@@ -92,30 +93,57 @@ describe("login", () => {
     expect(await login(db, { username: "pasif", password: PASSWORD, ip }, T0)).toEqual(invalid);
   });
 
-  it("locks a username after 5 failures, even for the right password, then unlocks after 15 minutes", async () => {
+  it("locks one username from one address after 5 failures, and says for how long", async () => {
     const db = testDb();
     await addUser(db, "ayse");
-    for (let i = 0; i < 5; i++) {
-      await login(db, { username: "ayse", password: "wrong-password", ip: `10.0.0.${i}` }, T0);
-    }
+    for (let i = 0; i < 5; i++) await login(db, { username: "ayse", password: "wrong-password", ip }, T0);
 
-    expect(await login(db, { username: "ayse", password: PASSWORD, ip }, at("2026-01-01T10:14:00Z"))).toEqual({
+    // Even the right password is refused, without being checked.
+    expect(await login(db, { username: "ayse", password: PASSWORD, ip }, at("2026-01-01T10:05:00Z"))).toEqual({
       ok: false,
       reason: "locked",
+      retryAfter: 10 * 60,
     });
-    expect((await login(db, { username: "ayse", password: PASSWORD, ip }, at("2026-01-01T10:15:01Z"))).ok).toBe(true);
+    expect((await login(db, { username: "ayse", password: PASSWORD, ip }, at("2026-01-01T10:15:00Z"))).ok).toBe(true);
   });
 
-  it("locks an IP after 20 failures across different usernames", async () => {
+  it("someone guessing from another address cannot lock the user out (QA K3)", async () => {
+    const db = testDb();
+    await addUser(db, "admin", "admin");
+    for (let i = 0; i < 12; i++) await login(db, { username: "admin", password: "wrong-password", ip: "203.0.113.9" }, T0);
+
+    expect((await login(db, { username: "admin", password: PASSWORD, ip: "203.0.113.9" }, T0)).ok).toBe(false);
+    expect((await login(db, { username: "admin", password: PASSWORD, ip }, T0)).ok).toBe(true);
+  });
+
+  it("one person's mistakes do not lock colleagues at the same address", async () => {
     const db = testDb();
     await addUser(db, "ayse");
-    for (let i = 0; i < 20; i++) {
-      await login(db, { username: `guess${i}`, password: "wrong-password", ip }, T0);
-    }
+    await addUser(db, "can");
+    for (let i = 0; i < 5; i++) await login(db, { username: "ayse", password: "wrong-password", ip }, T0);
 
-    expect(await login(db, { username: "ayse", password: PASSWORD, ip }, T0)).toEqual({ ok: false, reason: "locked" });
-    expect((await login(db, { username: "ayse", password: PASSWORD, ip: "10.9.9.9" }, T0)).ok).toBe(true);
+    expect((await login(db, { username: "ayse", password: PASSWORD, ip }, T0)).ok).toBe(false);
+    expect((await login(db, { username: "can", password: PASSWORD, ip }, T0)).ok).toBe(true);
   });
+
+  it("guessing one username from many addresses stops after 30 failures", async () => {
+    const db = testDb();
+    await addUser(db, "ayse");
+    for (let i = 0; i < LIMITS.username; i++) {
+      expect(await login(db, { username: "ayse", password: "wrong-password", ip: `198.51.100.${i}` }, T0)).toEqual({ ok: false, reason: "invalid" });
+    }
+    expect(await login(db, { username: "ayse", password: PASSWORD, ip: "198.51.100.200" }, T0)).toMatchObject({ reason: "locked" });
+    expect((await login(db, { username: "ayse", password: PASSWORD, ip }, at("2026-01-01T10:15:00Z"))).ok).toBe(true);
+  });
+
+  it("guessing many usernames from one address stops after 100 failures", async () => {
+    const db = testDb();
+    await addUser(db, "ayse");
+    for (let i = 0; i < LIMITS.ip; i++) await login(db, { username: `guess${i}`, password: "wrong-password", ip }, T0);
+
+    expect(await login(db, { username: "ayse", password: PASSWORD, ip }, T0)).toMatchObject({ reason: "locked" });
+    expect((await login(db, { username: "ayse", password: PASSWORD, ip: "10.9.9.9" }, T0)).ok).toBe(true);
+  }, 30_000); // a hundred password checks take a few seconds
 
   it("forgets earlier failures after a successful sign-in", async () => {
     const db = testDb();
@@ -126,5 +154,27 @@ describe("login", () => {
       }
       expect((await login(db, { username: "ayse", password: PASSWORD, ip: "10.9.9.9" }, T0)).ok).toBe(true);
     }
+  });
+});
+
+describe("client address (QA K3)", () => {
+  it("without a proxy, uses the address Next.js took from the socket", () => {
+    expect(pickClientIp("::ffff:192.168.1.40", 0)).toBe("::ffff:192.168.1.40");
+    expect(pickClientIp(null, 0)).toBe("unknown");
+    expect(pickClientIp("", 0)).toBe("unknown");
+  });
+
+  it("behind proxies, ignores what the client wrote and takes the entry our proxy added", () => {
+    // The client claims to be 1.1.1.1; nginx appended the address it really came from.
+    expect(pickClientIp("1.1.1.1, 203.0.113.7", 1)).toBe("203.0.113.7");
+    expect(pickClientIp("9.9.9.9, 1.1.1.1, 203.0.113.7", 1)).toBe("203.0.113.7");
+    // Two proxies: load balancer, then nginx.
+    expect(pickClientIp("1.1.1.1, 203.0.113.7, 10.0.0.2", 2)).toBe("203.0.113.7");
+  });
+
+  it("falls back safely on a short header or a bad setting", () => {
+    expect(pickClientIp("203.0.113.7", 3)).toBe("unknown");
+    expect(pickClientIp("1.1.1.1, 203.0.113.7", Number.NaN)).toBe("203.0.113.7");
+    expect(pickClientIp(" 203.0.113.7 ,, ", 1)).toBe("203.0.113.7");
   });
 });

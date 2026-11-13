@@ -33,7 +33,9 @@ const viewColumns = {
   name: licenses.name,
   vendor: licenses.vendor,
   seats: licenses.seats,
-  usedSeats: sql<number>`(select count(*) from ${licenseAssignments} where ${licenseAssignments.licenseId} = ${licenses.id})`,
+  // Table names are spelled out: Drizzle writes bare column names inside a raw
+  // sub-select, and a bare "id" would be resolved against the wrong table.
+  usedSeats: sql<number>`(select count(*) from license_assignments la where la.license_id = "licenses"."id")`,
   hasKey: sql<number>`${licenses.keyEncrypted} is not null`.mapWith(Boolean),
   expiryDate: licenses.expiryDate,
   costMinor: licenses.costMinor,

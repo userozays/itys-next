@@ -19,7 +19,7 @@ export function LocationDialog({ location, trigger }: { location?: { id: number;
         <DialogHeader>
           <DialogTitle>{location ? t("locations.edit") : t("locations.new")}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form method="post" onSubmit={onSubmit} className="grid gap-4">
           {location ? <input type="hidden" name="id" value={location.id} /> : null}
           <FormError state={state} />
           <Field name="name" label={t("locations.name")} state={state} defaultValue={location?.name} required />

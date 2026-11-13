@@ -10,7 +10,7 @@ export function LoginForm({ next }: { next: string }) {
   const { state, pending, onSubmit } = useFormAction(loginAction);
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <input type="hidden" name="next" value={next} />
       <FormError state={state} />
       <Field name="username" label={t("username")} state={state} autoComplete="username" autoFocus required />

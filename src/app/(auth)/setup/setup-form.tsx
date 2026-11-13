@@ -10,7 +10,7 @@ export function SetupForm() {
   const { state, pending, onSubmit } = useFormAction(setupAction);
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <FormError state={state} />
       <Field name="name" label={t("auth.name")} state={state} autoComplete="name" autoFocus required />
       <Field

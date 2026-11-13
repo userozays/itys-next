@@ -1,29 +1,43 @@
-import { and, eq, gt, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, lt } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { loginAttempts, users } from "../db/schema";
 import { dummyHash, verifyPassword } from "./password";
 import { createSession } from "./sessions";
 
 const WINDOW = 15 * 60; // seconds
-const MAX_PER_USERNAME = 5;
-const MAX_PER_IP = 20;
 
-export type LoginResult = { ok: true; token: string } | { ok: false; reason: "invalid" | "locked" };
+/**
+ * How many failures within the window lock a key. The tight limit applies only
+ * to one username from one address, so somebody elsewhere cannot lock a user
+ * out by guessing. The wide limits stop guessing spread over many addresses
+ * or many usernames, and are set high enough not to trip in ordinary use.
+ */
+export const LIMITS = { pair: 5, username: 30, ip: 100 } as const;
+
+export type LoginResult =
+  | { ok: true; token: string }
+  | { ok: false; reason: "invalid" }
+  /** `retryAfter`: seconds until another attempt is allowed. */
+  | { ok: false; reason: "locked"; retryAfter: number };
 
 const seconds = (d: Date) => Math.floor(d.getTime() / 1000);
 
-function failures(db: Db, key: string, since: number): number {
-  const row = db
-    .select({ n: sql<number>`count(*)` })
+/** Seconds until `key` drops back under its limit; 0 when it is not locked. */
+function lockedFor(db: Db, key: string, max: number, t: number): number {
+  const times = db
+    .select({ at: loginAttempts.at })
     .from(loginAttempts)
-    .where(and(eq(loginAttempts.key, key), gt(loginAttempts.at, since)))
-    .get();
-  return row?.n ?? 0;
+    .where(and(eq(loginAttempts.key, key), gt(loginAttempts.at, t - WINDOW)))
+    .orderBy(asc(loginAttempts.at))
+    .all();
+  if (times.length < max) return 0;
+  // Unlocked once enough of the oldest failures have left the window.
+  return times[times.length - max]!.at + WINDOW - t;
 }
 
 /**
  * Verifies credentials and opens a session.
- * - Too many recent failures for the username or the IP → "locked", without checking the password.
+ * - Too many recent failures → "locked", without checking the password.
  * - Unknown user, wrong password and deactivated user are indistinguishable ("invalid"),
  *   and each costs one password verification so timing does not leak which it was.
  */
@@ -34,30 +48,31 @@ export async function login(
 ): Promise<LoginResult> {
   const username = input.username.trim().toLowerCase();
   const t = seconds(now);
-  const userKey = `u:${username}`;
-  const ipKey = `ip:${input.ip}`;
+  const keys = {
+    pair: `p:${username}|${input.ip}`,
+    username: `u:${username}`,
+    ip: `ip:${input.ip}`,
+  };
 
   db.delete(loginAttempts).where(lt(loginAttempts.at, t - WINDOW)).run();
-  if (
-    failures(db, userKey, t - WINDOW) >= MAX_PER_USERNAME ||
-    failures(db, ipKey, t - WINDOW) >= MAX_PER_IP
-  ) {
-    return { ok: false, reason: "locked" };
-  }
+  const retryAfter = Math.max(
+    lockedFor(db, keys.pair, LIMITS.pair, t),
+    lockedFor(db, keys.username, LIMITS.username, t),
+    lockedFor(db, keys.ip, LIMITS.ip, t),
+  );
+  if (retryAfter > 0) return { ok: false, reason: "locked", retryAfter };
 
   const user = db.select().from(users).where(eq(users.username, username)).get();
   const passwordOk = await verifyPassword(input.password, user?.passwordHash ?? (await dummyHash()));
 
   if (!user || !passwordOk || !user.active) {
     db.insert(loginAttempts)
-      .values([
-        { key: userKey, at: t },
-        { key: ipKey, at: t },
-      ])
+      .values(Object.values(keys).map((key) => ({ key, at: t })))
       .run();
     return { ok: false, reason: "invalid" };
   }
 
-  db.delete(loginAttempts).where(eq(loginAttempts.key, userKey)).run();
+  // The person at this address proved who they are; their own mistakes are forgotten.
+  db.delete(loginAttempts).where(eq(loginAttempts.key, keys.pair)).run();
   return { ok: true, token: createSession(db, user.id, now) };
 }

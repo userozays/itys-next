@@ -1,0 +1,1 @@
+ALTER TABLE `companies` ADD `tag_seq` integer DEFAULT 0 NOT NULL;

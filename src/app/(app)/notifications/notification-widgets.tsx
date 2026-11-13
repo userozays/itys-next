@@ -42,7 +42,7 @@ function SettingsForm({
 
   return (
     // Secret fields are cleared by the form reset after a successful save.
-    <form onSubmit={onSubmit} onChange={() => setSaved(false)} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} onChange={() => setSaved(false)} className="grid gap-4">
       <FormError state={state} />
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNotNull, like, or, sql, type SQL } from 
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
-import { assets, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
+import { assets, companies, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
 import { AppError } from "../errors";
 import type { AssetInput } from "../validation";
 import { fold } from "../import/mapping";
@@ -126,23 +126,28 @@ export function getAsset(db: Db, actor: Actor, assetId: number): AssetListItem {
   return row;
 }
 
-/** Hands out free tags of the form D-0001 within a company, reading the taken ones once. */
-export function tagAllocator(db: DbOrTx, companyId: number): () => string {
-  const taken = new Set(
-    db
-      .select({ tag: assets.tag })
-      .from(assets)
-      .where(and(eq(assets.companyId, companyId), like(assets.tag, "D-%")))
-      .all()
-      .map((r) => r.tag),
-  );
-  let n = taken.size;
+const AUTO_TAG = /^D-(\d+)$/;
+const autoTagNumber = (tag: string) => Number(AUTO_TAG.exec(tag)?.[1] ?? 0);
+
+/**
+ * Hands out device tags of the form D-0001 within a company. Numbering
+ * continues after the highest number ever issued (remembered on the company)
+ * or currently in use, whichever is greater, so numbers are never reused.
+ * `reserved` are tags about to be inserted in the same operation (an import).
+ */
+export function tagAllocator(db: DbOrTx, companyId: number, reserved: string[] = []): () => string {
+  const issued = db.select({ seq: companies.tagSeq }).from(companies).where(eq(companies.id, companyId)).get()?.seq ?? 0;
+  const inUse = db
+    .select({ tag: assets.tag })
+    .from(assets)
+    .where(and(eq(assets.companyId, companyId), like(assets.tag, "D-%")))
+    .all()
+    .map((r) => r.tag);
+  let n = Math.max(issued, ...[...inUse, ...reserved].map(autoTagNumber));
   return () => {
-    let tag: string;
-    do tag = `D-${String(++n).padStart(4, "0")}`;
-    while (taken.has(tag));
-    taken.add(tag);
-    return tag;
+    n++;
+    db.update(companies).set({ tagSeq: n }).where(eq(companies.id, companyId)).run();
+    return `D-${String(n).padStart(4, "0")}`;
   };
 }
 

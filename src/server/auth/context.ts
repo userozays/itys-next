@@ -5,6 +5,7 @@ import { COMPANY_COOKIE, SESSION_COOKIE } from "@/lib/cookies";
 import { getDb } from "../db/client";
 import type { Company } from "../db/schema";
 import { resolveActiveCompany } from "../services/companies";
+import { pickClientIp } from "./client-ip";
 import { getSessionActor, SESSION_MAX_AGE, type Actor } from "./sessions";
 
 const cookieOptions = {
@@ -58,8 +59,7 @@ export async function setCompanyCookie(companyId: number): Promise<void> {
 }
 
 export async function clientIp(): Promise<string> {
-  const forwarded = (await headers()).get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || "unknown";
+  return pickClientIp((await headers()).get("x-forwarded-for"), Number(process.env.TRUSTED_PROXY_COUNT));
 }
 
 /** Public address of the app, for links that leave the browser (QR labels). */

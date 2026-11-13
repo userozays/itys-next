@@ -68,7 +68,7 @@ export function AssetForm({ asset, locations }: { asset?: AssetFormValues; locat
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       {asset ? <input type="hidden" name="id" value={asset.id} /> : null}
       <FormError state={state} />
 

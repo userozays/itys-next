@@ -54,7 +54,7 @@ export function UserDialog({
         <DialogHeader>
           <DialogTitle>{user ? t("users.edit") : t("users.new")}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form method="post" onSubmit={onSubmit} className="grid gap-4">
           {user ? <input type="hidden" name="id" value={user.id} /> : null}
           <FormError state={state} />
           <Field name="name" label={t("users.name")} state={state} defaultValue={user?.name} required />
@@ -135,7 +135,7 @@ export function ResetPasswordDialog({ user, trigger }: { user: UserRow; trigger:
           <DialogTitle>{t("users.resetPasswordFor", { username: user.username })}</DialogTitle>
           <DialogDescription>{t("users.resetPasswordHint")}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form method="post" onSubmit={onSubmit} className="grid gap-4">
           <input type="hidden" name="id" value={user.id} />
           <FormError state={state} />
           <Field

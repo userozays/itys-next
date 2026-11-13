@@ -50,6 +50,13 @@
       "when": 1794391444257,
       "tag": "0006_worthless_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794562166487,
+      "tag": "0007_damp_emma_frost",
+      "breakpoints": true
     }
   ]
 }

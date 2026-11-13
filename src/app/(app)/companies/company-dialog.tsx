@@ -28,7 +28,7 @@ export function CompanyDialog({ company, trigger }: { company?: CompanyRow; trig
         <DialogHeader>
           <DialogTitle>{company ? t("companies.edit") : t("companies.new")}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form method="post" onSubmit={onSubmit} className="grid gap-4">
           {company ? <input type="hidden" name="id" value={company.id} /> : null}
           <FormError state={state} />
           <Field name="name" label={t("companies.name")} state={state} defaultValue={company?.name} required />

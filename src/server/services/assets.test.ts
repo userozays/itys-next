@@ -263,3 +263,49 @@ describe("specifications from a device of the same model", () => {
     expect(findModelSpecs(db, techA, "Dell", "7010")).toMatchObject({ sourceName: "A-PC", ramGb: 8 });
   });
 });
+
+describe("device counts per location (QA K1)", () => {
+  it("counts each location's own devices, whatever their ids happen to be", async () => {
+    const { db, a, b, admin } = await world();
+    const depot = createLocation(db, admin, a, { name: "Depo" });
+    const office = createLocation(db, admin, a, { name: "Ofis" });
+    const empty = createLocation(db, admin, a, { name: "Boş Oda" });
+    const other = createLocation(db, admin, b, { name: "B Deposu" });
+    for (let i = 0; i < 3; i++) createAsset(db, admin, a, assetInput({ locationId: office.id }));
+    createAsset(db, admin, a, assetInput({ locationId: depot.id }));
+    createAsset(db, admin, a, assetInput());
+    for (let i = 0; i < 2; i++) createAsset(db, admin, b, assetInput({ locationId: other.id }));
+
+    expect(listLocations(db, admin, a).map((l) => [l.name, l.assetCount])).toEqual([["Boş Oda", 0], ["Depo", 1], ["Ofis", 3]]);
+    expect(listLocations(db, admin, b).map((l) => [l.name, l.assetCount])).toEqual([["B Deposu", 2]]);
+    expect(empty.id).toBeGreaterThan(0);
+  });
+});
+
+describe("tags are never handed out twice (QA K2)", () => {
+  it("a deleted device's number is not given to the next device", async () => {
+    const { db, a, admin } = await world();
+    createAsset(db, admin, a, assetInput());
+    const second = createAsset(db, admin, a, assetInput());
+    expect(second.tag).toBe("D-0002");
+
+    deleteAsset(db, admin, second.id);
+    expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0003");
+
+    // Even when every device is gone, numbering does not start over.
+    for (const row of listAssets(db, admin, a).rows) deleteAsset(db, admin, row.id);
+    expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0004");
+  });
+
+  it("continues after the highest number in use, and ignores look-alike tags", async () => {
+    const { db, a, b, admin } = await world();
+    createAsset(db, admin, a, assetInput({ tag: "D-0040" })); // typed by hand
+    createAsset(db, admin, a, assetInput({ tag: "d-0900" })); // lower case: not one of ours
+    createAsset(db, admin, a, assetInput({ tag: "D-12A" }));
+    createAsset(db, admin, a, assetInput({ tag: "PC-7" }));
+
+    expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0041");
+    expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0042");
+    expect(createAsset(db, admin, b, assetInput()).tag).toBe("D-0001"); // each company has its own sequence
+  });
+});

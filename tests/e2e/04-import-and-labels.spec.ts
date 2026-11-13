@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ADMIN, choose, companySwitcher, signIn, TECH } from "./helpers";
 
-// Builds on 03: Akdeniz Lojistik has "Muhasebe PC" (D-0001) and "Satış Dizüstü" (D-0002).
+// Builds on 03: Akdeniz Lojistik has "Muhasebe PC" (D-0001) and "Satış Dizüstü" (D-0003).
 test.describe.configure({ mode: "serial" });
 
 let akdenizId = "";

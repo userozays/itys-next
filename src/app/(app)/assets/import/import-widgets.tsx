@@ -14,7 +14,7 @@ export function UploadForm() {
   const { state, pending, onSubmit } = useFormAction(uploadImportAction);
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <FormError state={state} />
       <div className="grid gap-1.5">
         <Label htmlFor="file">{t("file")}</Label>
@@ -46,7 +46,7 @@ export function MappingForm({ jobId, fields, headers }: { jobId: number; fields:
   const { state, pending, onSubmit } = useFormAction(saveMappingAction.bind(null, jobId));
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <FormError state={state} />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((f) => (

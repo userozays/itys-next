@@ -20,7 +20,7 @@ async function signIn(username: string, password: string, next = "/"): Promise<F
   const result = await login(getDb(), { username, password, ip: await clientIp() });
   if (!result.ok) {
     const t = await getTranslations("auth");
-    return { error: t(result.reason) };
+    return { error: result.reason === "locked" ? t("locked", { minutes: Math.ceil(result.retryAfter / 60) }) : t("invalid") };
   }
   await setSessionCookie(result.token);
   redirect(safeNext(next));

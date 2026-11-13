@@ -125,3 +125,18 @@ test("signed-out visitors are sent to the sign-in page", async ({ page }) => {
   await page.goto("/companies");
   await expect(page).toHaveURL(/\/login\?next=%2Fcompanies$/);
 });
+
+test("without JavaScript, the password never ends up in the address (QA K4)", async ({ browser }) => {
+  // What happens on a slow connection, or when a script fails to load, before the page becomes interactive.
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/login");
+  await page.getByLabel("Kullanıcı adı").fill(ADMIN.username);
+  await page.getByLabel("Parola").fill(ADMIN.password);
+  await page.getByRole("button", { name: "Giriş yap" }).click();
+  await page.waitForLoadState();
+
+  expect(page.url()).not.toContain("password");
+  expect(page.url()).not.toContain(ADMIN.password);
+  await context.close();
+});

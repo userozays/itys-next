@@ -121,3 +121,26 @@ describe("spreadsheet import", () => {
     expect(listAssets(db, admin, a, { q: "D-5001" }).rows.map((r) => r.name)).toEqual(["Cihaz 5000"]);
   });
 });
+
+describe("generated tags in an import (QA K2)", () => {
+  it("do not collide with tags written further down the same file, nor reuse deleted numbers", async () => {
+    const db = testDb();
+    const a = addCompany(db, "A");
+    const admin = await addUser(db, "admin", "admin");
+    const gone = createAsset(db, admin, a, assetInput());
+    const { deleteAsset } = await import("./assets");
+    deleteAsset(db, admin, gone.id); // D-0001 was issued once and must stay retired
+
+    const jobId = createImportJob(db, admin, a, "a.csv", {
+      headers: ["Etiket No", "Cihaz Adı"],
+      rows: [["", "İlk"], ["D-0002", "Elle Etiketli"], ["", "Son"]],
+    });
+    expect(runImport(db, admin, jobId)).toEqual({ imported: 3, skipped: 0 });
+
+    expect(listAssets(db, admin, a, { sort: "tag" }).rows.map((r) => [r.tag, r.name])).toEqual([
+      ["D-0002", "Elle Etiketli"],
+      ["D-0003", "İlk"],
+      ["D-0004", "Son"],
+    ]);
+  });
+});

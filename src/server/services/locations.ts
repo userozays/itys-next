@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, locations, type Location } from "../db/schema";
@@ -20,16 +20,20 @@ function getLocation(db: Db, actor: Actor, locationId: number): Location {
 
 export function listLocations(db: Db, actor: Actor, companyId: number): LocationWithCount[] {
   getCompany(db, actor, companyId);
+  // A join rather than a sub-select: inside a raw sub-select Drizzle writes
+  // column names without their table, so "id" there meant assets.id.
   return db
     .select({
       id: locations.id,
       companyId: locations.companyId,
       name: locations.name,
       createdAt: locations.createdAt,
-      assetCount: sql<number>`(select count(*) from ${assets} where ${assets.locationId} = ${locations.id})`,
+      assetCount: count(assets.id),
     })
     .from(locations)
+    .leftJoin(assets, eq(assets.locationId, locations.id))
     .where(eq(locations.companyId, companyId))
+    .groupBy(locations.id)
     .all()
     // Sorted here because SQLite puts Ç, İ, Ö, Ş, Ü after Z.
     .sort((a, b) => a.name.localeCompare(b.name, "tr"));
