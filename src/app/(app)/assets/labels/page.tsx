@@ -8,6 +8,7 @@ import { PrintButton } from "@/components/print-button";
 import { appOrigin, getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
 import { assetStatuses, assetTypes, type AssetStatus, type AssetType } from "@/server/db/schema";
+import { expiryFilters, type ExpiryFilter } from "@/lib/dates";
 import { assetLabelUrl, qrSvg } from "@/server/qr";
 import { getAsset, listAssetsForLabels, MAX_LABELS } from "@/server/services/assets";
 import { getCompany } from "@/server/services/companies";
@@ -49,6 +50,7 @@ export default async function LabelsPage({ searchParams }: PageProps<"/assets/la
       type: oneOf<AssetType>(assetTypes, one(params.type)),
       status: oneOf<AssetStatus>(assetStatuses, one(params.status)),
       locationId: Number(one(params.location)) || undefined,
+      warranty: oneOf<ExpiryFilter>(expiryFilters, one(params.warranty)),
     });
   }
 

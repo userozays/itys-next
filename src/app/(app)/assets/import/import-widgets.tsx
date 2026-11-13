@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { FormError, useFormAction } from "@/components/form";
+import { useSafeCall } from "@/components/safe-call";
 import { SelectBox } from "@/components/select-box";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -73,11 +74,12 @@ export function RunImportButton({ jobId, count }: { jobId: number; count: number
   const t = useTranslations("import");
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
+  const call = useSafeCall();
 
   return (
     <div className="grid justify-items-start gap-2">
       <FormError state={state} />
-      <Button disabled={pending || count === 0} onClick={() => startTransition(async () => setState(await runImportAction(jobId)))}>
+      <Button disabled={pending || count === 0} onClick={() => startTransition(async () => setState(await call(() => runImportAction(jobId), (error): FormState => ({ error }))))}>
         {pending ? t("running") : t("run", { count })}
       </Button>
     </div>

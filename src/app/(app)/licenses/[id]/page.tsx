@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { LicenseExpiryBadge } from "@/components/asset-badges";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { OtherCompanyNotice } from "@/components/other-company-notice";
 import { BackToList } from "@/components/list-memory";
 import { SeatUsage } from "@/components/seat-usage";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
 
   return (
     <>
+      <OtherCompanyNotice actor={actor} companyId={license.companyId} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1.5">
           <BackToList list="licenses" fallback="/licenses" className="text-sm text-muted-foreground underline-offset-4 hover:underline">

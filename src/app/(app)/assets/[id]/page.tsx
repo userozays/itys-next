@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { LicenseExpiryBadge, StatusBadge, WarrantyBadge } from "@/components/asset-badges";
 import { AssetLabel } from "@/components/asset-label";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { OtherCompanyNotice } from "@/components/other-company-notice";
 import { BackToList } from "@/components/list-memory";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { formatDate, todayIso } from "@/lib/dates";
 import { appOrigin, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
 import { assetLabelUrl, qrSvg } from "@/server/qr";
+import { devicesSharingIp } from "@/server/services/assets";
 import { getCompany } from "@/server/services/companies";
 import { listLicensesForAsset } from "@/server/services/licenses";
 import { deleteAssetAction } from "../actions";
@@ -39,11 +41,13 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
   const company = getCompany(getDb(), actor, asset.companyId);
   const licenses = listLicensesForAsset(getDb(), actor, asset.id);
   const today = todayIso();
+  const sharedIp = devicesSharingIp(getDb(), actor, asset.id);
   const hasSpecs = [asset.cpu, asset.ramGb, asset.storage, asset.os, asset.hostname, asset.ipAddress, asset.macAddress].some(Boolean);
   const qr = await qrSvg(assetLabelUrl(await appOrigin(), asset.companyId, asset.tag));
 
   return (
     <>
+      <OtherCompanyNotice actor={actor} companyId={asset.companyId} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1.5">
           <BackToList list="assets" fallback="/assets" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
@@ -105,6 +109,19 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
             ) : (
               <p className="text-sm text-muted-foreground">{t("assets.noSpecs")}</p>
             )}
+            {sharedIp.length > 0 ? (
+              <p role="status" className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm">
+                {t("assets.sharedIp")}{" "}
+                {sharedIp.map((other, i) => (
+                  <span key={other.id}>
+                    {i > 0 ? ", " : ""}
+                    <Link href={`/assets/${other.id}`} className="underline underline-offset-4">
+                      {other.tag} ({other.name})
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
         <Card>

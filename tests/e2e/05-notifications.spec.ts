@@ -146,3 +146,19 @@ test("a failed delivery is kept for retry with its reason", async ({ page }) => 
   expect(await page.content()).not.toContain("E2E-BOT-TOKEN");
   expect(received).toHaveLength(2);
 });
+
+test("a lost connection shows a message instead of a button stuck on saving (QA O1)", async ({ page }) => {
+  await openNotifications(page);
+  // Server actions are POST requests carrying a Next-Action header.
+  await page.route("**/*", (route) =>
+    route.request().method() === "POST" && route.request().headers()["next-action"] ? route.abort("connectionreset") : route.continue(),
+  );
+  await page.getByRole("button", { name: "Kaydet" }).click();
+
+  await expect(page.getByText("Sunucudan yanıt alınamadı.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kaydet" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "Test bildirimi gönder" }).click();
+  await expect(page.getByText("Sunucudan yanıt alınamadı.").last()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Test bildirimi gönder" })).toBeEnabled();
+});

@@ -60,7 +60,8 @@ export function AssetForm({ asset, locations }: { asset?: AssetFormValues; locat
     const key = `${brand}|${model}`;
     if (!brand || !model || key === lastLookup.current) return;
     lastLookup.current = key;
-    const specs = await suggestModelSpecsAction(brand, model, asset?.id);
+    // A failed lookup only means no suggestion; the form keeps working.
+    const specs = await suggestModelSpecsAction(brand, model, asset?.id).catch(() => null);
     if (!specs) return setSuggestion(undefined);
     // Fill straight away only when nothing would be overwritten; otherwise offer it.
     if (SPEC_FIELDS.every((field) => !input(field)?.value.trim())) applySpecs(specs);

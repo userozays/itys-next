@@ -3,6 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { searchFold, turkishSortKey } from "../../lib/turkish";
 import * as schema from "./schema";
 
 export type Db = BetterSQLite3Database<typeof schema>;
@@ -20,6 +21,10 @@ export function openDb(file: string): Db {
   const sqlite = new Database(file);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  // Turkish-aware text functions for searching and sorting (src/server/db/turkish-sql.ts).
+  const textFn = (fn: (text: string) => string) => (value: unknown) => (typeof value === "string" ? fn(value) : value);
+  sqlite.function("tr_fold", { deterministic: true }, textFn(searchFold));
+  sqlite.function("tr_sort_key", { deterministic: true }, textFn(turkishSortKey));
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: MIGRATIONS_DIR });
   return db;

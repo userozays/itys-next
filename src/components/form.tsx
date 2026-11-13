@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ComponentProps, type ReactNode, type SubmitEvent } from "react";
 import { Input } from "@/components/ui/input";
+import { useSafeCall } from "@/components/safe-call";
 import { SelectBox, type SelectOption } from "@/components/select-box";
 import { Label } from "@/components/ui/label";
 import type { FormState } from "@/lib/form-state";
@@ -10,12 +11,13 @@ import type { FormState } from "@/lib/form-state";
 export function useFormAction(action: (form: FormData) => Promise<FormState>, onSuccess?: () => void) {
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
+  const call = useSafeCall();
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     startTransition(async () => {
-      const result = await action(new FormData(form));
+      const result = await call(() => action(new FormData(form)), (error): FormState => ({ error }));
       setState(result);
       if (result.ok) {
         form.reset();

@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { addCompany, addUser, assetInput, testDb } from "../testing/fixtures";
+import { addCompany, addUser, assetInput, fieldIssuesOf, testDb } from "../testing/fixtures";
 import { assetInput as schema } from "../validation";
-import { assetSummary, createAsset, deleteAsset, findModelSpecs, getAsset, listAssets, PAGE_SIZE, updateAsset } from "./assets";
+import {
+  assetConflicts,
+  assetSummary,
+  createAsset,
+  deleteAsset,
+  devicesSharingIp,
+  findModelSpecs,
+  getAsset,
+  getAssetByTag,
+  listAssets,
+  PAGE_SIZE,
+  updateAsset,
+} from "./assets";
+import { createCompany } from "./companies";
 import { createLocation, deleteLocation, listLocations, renameLocation } from "./locations";
 
 async function world() {
@@ -73,8 +86,8 @@ describe("asset tags", () => {
     const first = createAsset(db, admin, a, assetInput({ tag: "PC-1" }));
     const second = createAsset(db, admin, a, assetInput({ tag: "PC-2" }));
 
-    expect(() => createAsset(db, admin, a, assetInput({ tag: "PC-1" }))).toThrow("tagTaken");
-    expect(() => updateAsset(db, admin, second.id, assetInput({ tag: "PC-1" }))).toThrow("tagTaken");
+    expect(fieldIssuesOf(() => createAsset(db, admin, a, assetInput({ tag: "PC-1" })))).toEqual(["tag:errors.tagUsedBy"]);
+    expect(fieldIssuesOf(() => updateAsset(db, admin, second.id, assetInput({ tag: "PC-1" })))).toEqual(["tag:errors.tagUsedBy"]);
     expect(createAsset(db, admin, b, assetInput({ tag: "PC-1" })).tag).toBe("PC-1");
     expect(updateAsset(db, admin, first.id, assetInput({ tag: null })).tag).toBe("PC-1");
   });
@@ -300,12 +313,154 @@ describe("tags are never handed out twice (QA K2)", () => {
   it("continues after the highest number in use, and ignores look-alike tags", async () => {
     const { db, a, b, admin } = await world();
     createAsset(db, admin, a, assetInput({ tag: "D-0040" })); // typed by hand
-    createAsset(db, admin, a, assetInput({ tag: "d-0900" })); // lower case: not one of ours
-    createAsset(db, admin, a, assetInput({ tag: "D-12A" }));
+    createAsset(db, admin, a, assetInput({ tag: "D-12A" })); // not of the D-NNNN form
     createAsset(db, admin, a, assetInput({ tag: "PC-7" }));
 
     expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0041");
     expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0042");
+
+    // Typed in lower case it is stored as D-0900 (QA O4), so numbering continues after it.
+    expect(createAsset(db, admin, a, assetInput({ tag: "d-0900" })).tag).toBe("D-0900");
+    expect(createAsset(db, admin, a, assetInput()).tag).toBe("D-0901");
     expect(createAsset(db, admin, b, assetInput()).tag).toBe("D-0001"); // each company has its own sequence
+  });
+});
+
+describe("Turkish search and order (QA O2, O3)", () => {
+  async function people() {
+    const w = await world();
+    const { db, a, admin } = w;
+    for (const [name, assignedTo] of [
+      ["Zirve PC", "Ayşe Yılmaz"],
+      ["Üretim PC", "İsmail Işık"],
+      ["İnsan Kaynakları PC", "Can Öztürk"],
+      ["Çağrı Merkezi PC", null],
+      ["arşiv PC", null],
+      ["Bilgi İşlem PC", null],
+    ] as const) {
+      createAsset(db, admin, a, assetInput({ name, assignedTo }));
+    }
+    return w;
+  }
+
+  it("finds records regardless of Turkish case and accents", async () => {
+    const { db, a, admin } = await people();
+    const search = (q: string) => names(listAssets(db, admin, a, { q }).rows);
+
+    for (const q of ["ayşe", "AYŞE", "ayse", "Ayse"]) expect(search(q), q).toEqual(["Zirve PC"]);
+    for (const q of ["İnsan", "insan", "INSAN"]) expect(search(q), q).toEqual(["İnsan Kaynakları PC"]);
+    for (const q of ["ışık", "IŞIK", "isik"]) expect(search(q), q).toEqual(["Üretim PC"]);
+    expect(search("ÇAĞRI")).toEqual(["Çağrı Merkezi PC"]);
+    expect(search("%")).toEqual([]);
+  });
+
+  it("sorts names in Turkish alphabetical order, ignoring case, both ways", async () => {
+    const { db, a, admin } = await people();
+    const expected = ["arşiv PC", "Bilgi İşlem PC", "Çağrı Merkezi PC", "İnsan Kaynakları PC", "Üretim PC", "Zirve PC"];
+    expect(names(listAssets(db, admin, a).rows)).toEqual(expected);
+    expect(names(listAssets(db, admin, a, { sort: "name", dir: "desc" }).rows)).toEqual([...expected].reverse());
+  });
+});
+
+describe("duplicates that differ only in case (QA O4)", () => {
+  it("tags are stored in capitals, so d-0054 and D-0054 cannot both exist", async () => {
+    const { db, a, admin } = await world();
+    const first = createAsset(db, admin, a, assetInput({ tag: "pc-54" }));
+    expect(first.tag).toBe("PC-54");
+    expect(fieldIssuesOf(() => createAsset(db, admin, a, assetInput({ tag: "Pc-54" })))).toEqual(["tag:errors.tagUsedBy"]);
+    // A label scanned in any case still opens the device.
+    expect(getAssetByTag(db, admin, a, "pc-54").id).toBe(first.id);
+  });
+
+  it("location and company names are compared ignoring Turkish case", async () => {
+    const { db, a, admin } = await world();
+    createLocation(db, admin, a, { name: "Depo" });
+    const office = createLocation(db, admin, a, { name: "İç Ofis" });
+    expect(() => createLocation(db, admin, a, { name: "depo" })).toThrow("locationNameTaken");
+    expect(() => createLocation(db, admin, a, { name: "iç ofis" })).toThrow("locationNameTaken");
+    expect(() => renameLocation(db, admin, office.id, { name: "DEPO" })).toThrow("locationNameTaken");
+    expect(renameLocation(db, admin, office.id, { name: "İÇ OFİS" }).name).toBe("İÇ OFİS"); // renaming itself is fine
+
+    expect(() => createCompany(db, admin, { name: "a", active: true })).toThrow("companyNameTaken");
+  });
+});
+
+describe("IP, MAC and date checks (QA O5)", () => {
+  const base = { name: "PC", type: "computer", status: "in_use" };
+  const check = (extra: Record<string, unknown>) => schema.safeParse({ ...base, ...extra });
+
+  it("accepts IPv4 and IPv6, rejects anything else", () => {
+    expect(check({ ipAddress: "192.168.1.20" }).data?.ipAddress).toBe("192.168.1.20");
+    expect(check({ ipAddress: "FE80::1" }).data?.ipAddress).toBe("fe80::1");
+    expect(check({ ipAddress: "" }).data?.ipAddress).toBeNull();
+    for (const bad of ["999.1.1.1", "192.168.1", "sunucu", "10.0.0.1/24"]) expect(check({ ipAddress: bad }).success, bad).toBe(false);
+  });
+
+  it("accepts the usual MAC formats and stores one form", () => {
+    for (const mac of ["00:1a:2b:3c:4d:5e", "00-1A-2B-3C-4D-5E", "001a.2b3c.4d5e", "001A2B3C4D5E"]) {
+      expect(check({ macAddress: mac }).data?.macAddress, mac).toBe("00:1A:2B:3C:4D:5E");
+    }
+    for (const bad of ["zz:zz", "00:1A:2B:3C:4D", "00:1A:2B:3C:4D:5E:6F"]) expect(check({ macAddress: bad }).success, bad).toBe(false);
+  });
+
+  it("a warranty cannot end before the purchase", () => {
+    const result = check({ purchaseDate: "2026-05-01", warrantyEnd: "2025-01-01" });
+    expect(!result.success && result.error.issues.map((i) => [i.path[0], i.message])).toEqual([["warrantyEnd", "warrantyBeforePurchase"]]);
+    expect(check({ purchaseDate: "2026-05-01", warrantyEnd: "2026-05-01" }).success).toBe(true);
+    expect(check({ warrantyEnd: "2025-01-01" }).success).toBe(true);
+  });
+});
+
+describe("serial numbers, MAC and IP addresses shared between devices (QA O6)", () => {
+  it("refuses a serial or MAC already recorded in the company, naming the device", async () => {
+    const { db, a, b, admin } = await world();
+    const pc = createAsset(db, admin, a, assetInput({ name: "Muhasebe PC", serial: "SN-12345", macAddress: "00:1A:2B:3C:4D:5E" }));
+
+    const clash = () => createAsset(db, admin, a, assetInput({ serial: "sn-12345", macAddress: "001a2b3c4d5e" }));
+    expect(fieldIssuesOf(clash)).toEqual(["serial:errors.serialUsedBy", "macAddress:errors.macUsedBy"]);
+    expect(assetConflicts(db, a, { serial: "SN-12345" })[0]?.params).toEqual({ tag: pc.tag, name: "Muhasebe PC" });
+
+    // The device itself, another company, and placeholder serials are fine.
+    expect(fieldIssuesOf(() => updateAsset(db, admin, pc.id, assetInput({ serial: "SN-12345", macAddress: "00:1A:2B:3C:4D:5E" })))).toEqual([]);
+    expect(createAsset(db, admin, b, assetInput({ serial: "SN-12345" })).serial).toBe("SN-12345");
+    createAsset(db, admin, a, assetInput({ serial: "N/A" }));
+    expect(createAsset(db, admin, a, assetInput({ serial: "n/a" })).serial).toBe("n/a");
+  });
+
+  it("allows a shared IP address but lists the other devices", async () => {
+    const { db, a, admin } = await world();
+    const first = createAsset(db, admin, a, assetInput({ name: "Eski PC", ipAddress: "10.0.0.5" }));
+    const second = createAsset(db, admin, a, assetInput({ name: "Yeni PC", ipAddress: "10.0.0.5" }));
+    createAsset(db, admin, a, assetInput({ ipAddress: "10.0.0.6" }));
+
+    expect(devicesSharingIp(db, admin, second.id).map((d) => d.name)).toEqual(["Eski PC"]);
+    expect(devicesSharingIp(db, admin, first.id).map((d) => d.name)).toEqual(["Yeni PC"]);
+  });
+});
+
+describe("warranty filter (QA O9)", () => {
+  it("lists devices whose warranty ends within 30 days or has ended, leaving retired ones out", async () => {
+    const { db, a, admin } = await world();
+    const today = "2026-06-01";
+    for (const [name, warrantyEnd, status] of [
+      ["Bugün Biten", "2026-06-01", "in_use"],
+      ["30 Gün Kalan", "2026-07-01", "in_use"],
+      ["31 Gün Kalan", "2026-07-02", "in_use"],
+      ["Dün Biten", "2026-05-31", "in_use"],
+      ["Hurda Biten", "2026-05-01", "retired"],
+      ["Garantisiz", null, "in_use"],
+    ] as const) {
+      createAsset(db, admin, a, assetInput({ name, warrantyEnd, status }));
+    }
+    const list = (warranty: "soon" | "expired") => names(listAssets(db, admin, a, { warranty, today, sort: "warrantyEnd" }).rows);
+    expect(list("soon")).toEqual(["Bugün Biten", "30 Gün Kalan"]);
+    expect(list("expired")).toEqual(["Dün Biten"]);
+  });
+});
+
+describe("all form problems at once (QA O7)", () => {
+  it("the date order is checked even when other fields are wrong", () => {
+    const result = schema.safeParse({ name: "", type: "computer", status: "in_use", ramGb: "çok", purchaseDate: "2026-05-01", warrantyEnd: "2025-01-01" });
+    expect(!result.success && result.error.issues.map((i) => String(i.path[0])).sort()).toEqual(["name", "ramGb", "warrantyEnd"]);
   });
 });

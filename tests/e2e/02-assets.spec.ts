@@ -33,7 +33,7 @@ test("admin adds a location and a device that gets the next tag", async ({ page 
   await page.getByRole("button", { name: "Kaydet" }).click();
   await expect(page.getByRole("cell", { name: "Merkez Ofis", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Donanım" }).click();
+  await page.getByRole("link", { name: "Donanım", exact: true }).click();
   await expect(page.getByText("Bu şirkette henüz cihaz yok.")).toBeVisible();
   await page.getByRole("link", { name: "Yeni cihaz" }).click();
   await page.getByLabel("Cihaz adı").fill("Muhasebe PC");
@@ -56,7 +56,7 @@ test("a duplicate tag is rejected and the form keeps what was typed", async ({ p
   await signInAdmin(page);
   await addDevice(page, { name: "Kopya Cihaz", tag: "D-0001" });
 
-  await expect(page.getByText("Bu etiket no bu şirkette kullanılıyor.")).toBeVisible();
+  await expect(page.getByText("Bu etiket no zaten Muhasebe PC cihazında kullanılıyor.")).toBeVisible();
   await expect(page.getByLabel("Cihaz adı")).toHaveValue("Kopya Cihaz");
   await expect(page).toHaveURL(/\/assets\/new$/);
 });
@@ -209,7 +209,7 @@ test("another company starts with an empty inventory", async ({ page }) => {
   await signInAdmin(page);
   await switchCompany(page, "Boğaziçi Tekstil");
   await expect(page.getByRole("main").getByText("Boğaziçi Tekstil")).toBeVisible();
-  await page.getByRole("link", { name: "Donanım" }).click();
+  await page.getByRole("link", { name: "Donanım", exact: true }).click();
   await expect(page.getByText("Bu şirkette henüz cihaz yok.")).toBeVisible();
 
   await addDevice(page, { name: "Gizli Sunucu", type: "Sunucu" });

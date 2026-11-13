@@ -45,8 +45,20 @@ export function resolveActiveCompany(db: Db, actor: Actor, preferredId: number |
   return available.find((c) => c.id === preferredId) ?? available[0] ?? null;
 }
 
+/** QA O4: "Akdeniz Lojistik" and "akdeniz lojistik" are the same company. */
+function assertNameFree(db: Db, name: string, excludeId?: number): void {
+  const wanted = name.toLocaleLowerCase("tr");
+  const clash = db
+    .select({ id: companies.id, name: companies.name })
+    .from(companies)
+    .all()
+    .some((c) => c.id !== excludeId && c.name.toLocaleLowerCase("tr") === wanted);
+  if (clash) throw new AppError("companyNameTaken");
+}
+
 export function createCompany(db: Db, actor: Actor, input: CompanyInput): Company {
   assertAdmin(actor);
+  assertNameFree(db, input.name);
   try {
     return db.insert(companies).values(input).returning().get();
   } catch (e) {
@@ -57,6 +69,7 @@ export function createCompany(db: Db, actor: Actor, input: CompanyInput): Compan
 
 export function updateCompany(db: Db, actor: Actor, companyId: number, input: CompanyInput): Company {
   assertAdmin(actor);
+  assertNameFree(db, input.name, companyId);
   try {
     const row = db.update(companies).set(input).where(eq(companies.id, companyId)).returning().get();
     if (!row) throw new AppError("notFound");

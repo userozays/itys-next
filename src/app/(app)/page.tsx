@@ -47,6 +47,8 @@ function Breakdown({ title, rows }: { title: string; rows: { label: string; coun
   );
 }
 
+const SHOWN_EXPIRIES = 10;
+
 export default async function DashboardPage() {
   const actor = await requireActor();
   const t = await getTranslations("dashboard");
@@ -111,7 +113,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground">{t("expiriesEmpty")}</p>
             ) : (
               <ul className="divide-y rounded-lg border">
-                {expiries.slice(0, 10).map((item) => (
+                {expiries.slice(0, SHOWN_EXPIRIES).map((item) => (
                   <li key={`${item.kind}-${item.refId}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                     <Link
                       href={item.kind === "warranty" ? `/assets/${item.refId}` : `/licenses/${item.refId}`}
@@ -133,6 +135,23 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             )}
+            {expiries.length > SHOWN_EXPIRIES ? (
+              <p className="mt-3 text-sm text-muted-foreground">{t("expiriesMore", { total: expiries.length, shown: SHOWN_EXPIRIES })}</p>
+            ) : null}
+            <nav aria-label={t("expiriesTitle")} className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <Link href="/assets?warranty=soon" className="underline underline-offset-4">
+                {t("seeWarrantySoon")}
+              </Link>
+              <Link href="/assets?warranty=expired" className="underline underline-offset-4">
+                {t("seeWarrantyExpired")}
+              </Link>
+              <Link href="/licenses?expiry=soon" className="underline underline-offset-4">
+                {t("seeLicensesSoon")}
+              </Link>
+              <Link href="/licenses?expiry=expired" className="underline underline-offset-4">
+                {t("seeLicensesExpired")}
+              </Link>
+            </nav>
           </CardContent>
         </Card>
       ) : null}

@@ -128,7 +128,15 @@ export const assets = sqliteTable(
       .notNull()
       .default(sql`(datetime('now'))`),
   },
-  (t) => [uniqueIndex("assets_company_tag").on(t.companyId, t.tag), index("assets_company_name").on(t.companyId, t.name)],
+  (t) => [
+    uniqueIndex("assets_company_tag").on(t.companyId, t.tag),
+    index("assets_company_name").on(t.companyId, t.name),
+    // For the duplicate checks in assetConflicts(), which compare in capitals.
+    index("assets_company_tag_upper").on(t.companyId, sql`upper(${t.tag})`),
+    index("assets_company_serial_upper").on(t.companyId, sql`upper(${t.serial})`),
+    index("assets_company_mac_upper").on(t.companyId, sql`upper(${t.macAddress})`),
+    index("assets_company_ip").on(t.companyId, t.ipAddress),
+  ],
 );
 
 export const currencies = ["TRY", "USD", "EUR"] as const;

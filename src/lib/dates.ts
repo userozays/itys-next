@@ -9,6 +9,16 @@ export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / 86_400_000);
 }
 
+/** The calendar date `days` after `iso` (negative: before). */
+export function addDaysIso(iso: string, days: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** "soon": ends within 30 days, today included; "expired": already ended. Matches warrantyState(). */
+export const expiryFilters = ["soon", "expired"] as const;
+export type ExpiryFilter = (typeof expiryFilters)[number];
+export const SOON_DAYS = 30;
+
 export type WarrantyState = "expired" | "soon" | "ok";
 
 /** "soon" means the warranty ends within 30 days, today included. */

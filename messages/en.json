@@ -72,7 +72,12 @@
     "addFirst": "Add the first device",
     "licenseCount": "Licenses",
     "expiriesTitle": "Expiring soon and just expired",
-    "expiriesEmpty": "No warranty or license ends in the next 30 days."
+    "expiriesEmpty": "No warranty or license ends in the next 30 days.",
+    "expiriesMore": "Showing the first {shown} of {total}.",
+    "seeWarrantySoon": "Devices whose warranty ends soon",
+    "seeWarrantyExpired": "Devices whose warranty has ended",
+    "seeLicensesSoon": "Licenses expiring soon",
+    "seeLicensesExpired": "Expired licenses"
   },
   "companies": {
     "title": "Companies",
@@ -142,7 +147,11 @@
     "importNoName": "The device name column is not mapped.",
     "importNothingValid": "There are no valid rows to add.",
     "telegramTokenMissing": "Enter a bot token to switch Telegram on.",
-    "noChannelEnabled": "Switch on and save email or Telegram notifications first."
+    "noChannelEnabled": "Switch on and save email or Telegram notifications first.",
+    "unexpected": "No answer from the server. Check your connection; the action may still have completed, so reload the page to see.",
+    "tagUsedBy": "This tag is already used by {name}.",
+    "serialUsedBy": "This serial number is recorded on {tag} ({name}).",
+    "macUsedBy": "This MAC address is recorded on {tag} ({name})."
   },
   "validation": {
     "required": "This field is required.",
@@ -159,7 +168,10 @@
     "port": "Enter a port from 1 to 65535.",
     "chatId": "Must be a number or @channelname.",
     "tooMany": "At most 20 addresses.",
-    "ram": "Enter a whole number of GB (e.g. 16)."
+    "ram": "Enter a whole number of GB (e.g. 16).",
+    "ip": "Enter a valid IP address (e.g. 192.168.1.20).",
+    "mac": "Enter a valid MAC address (e.g. 00:1A:2B:3C:4D:5E).",
+    "warrantyBeforePurchase": "The warranty cannot end before the purchase date."
   },
   "noCompany": {
     "title": "No current company",
@@ -248,7 +260,14 @@
     "noSpecs": "No technical specifications entered.",
     "specsFilled": "Specifications were filled from {name} ({tag}), a device of the same model. Correct them if they differ.",
     "specsFound": "There is a device of the same model: {name} ({tag}).",
-    "specsApply": "Use its specifications"
+    "specsApply": "Use its specifications",
+    "sharedIp": "This IP address is also recorded on:",
+    "warrantyFilter": {
+      "label": "Warranty",
+      "all": "All warranties",
+      "soon": "Warranty ending (30 days)",
+      "expired": "Warranty ended"
+    }
   },
   "locations": {
     "title": "Locations",
@@ -307,7 +326,13 @@
     "deleteTitle": "Delete this license?",
     "deleteDescription": "{name} and its device assignments will be permanently deleted. This cannot be undone.",
     "onDevice": "Licenses on this device",
-    "noneOnDevice": "No license is assigned to this device."
+    "noneOnDevice": "No license is assigned to this device.",
+    "expiryFilter": {
+      "label": "Expiry",
+      "all": "All",
+      "soon": "Expiring (30 days)",
+      "expired": "Expired"
+    }
   },
   "import": {
     "title": "Import devices",
@@ -351,7 +376,14 @@
       "tooLong": "too long",
       "tagTaken": "this tag already exists in the company",
       "tagDuplicate": "this tag appears earlier in the file",
-      "ram": "invalid RAM (whole number of GB)"
+      "ram": "invalid RAM (whole number of GB)",
+      "ip": "invalid IP address",
+      "mac": "invalid MAC address",
+      "warrantyBeforePurchase": "before the purchase date",
+      "serialTaken": "this serial number is recorded on another device of the company",
+      "serialDuplicate": "this serial number appears earlier in the file",
+      "macTaken": "this MAC address is recorded on another device of the company",
+      "macDuplicate": "this MAC address appears earlier in the file"
     }
   },
   "labels": {
@@ -431,5 +463,9 @@
     },
     "takePhoto": "Read from a photo",
     "reading": "Reading…"
+  },
+  "otherCompany": {
+    "notice": "This record belongs to {company}. You are working in {active}; going back to the list and new records go there.",
+    "switch": "Switch to {company}"
   }
 }

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type ReactElement } from "react";
+import { useSafeCall } from "@/components/safe-call";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +31,7 @@ export function ConfirmDelete({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
+  const call = useSafeCall();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -54,7 +56,7 @@ export function ConfirmDelete({
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
-                const result = await action();
+                const result = await call(action, (message): FormState => ({ error: message }));
                 if (result.ok) setOpen(false);
                 else setError(result.error);
               })

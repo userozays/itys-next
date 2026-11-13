@@ -39,8 +39,21 @@ export function listLocations(db: Db, actor: Actor, companyId: number): Location
     .sort((a, b) => a.name.localeCompare(b.name, "tr"));
 }
 
+/** QA O4: "Depo" and "depo" are the same location. */
+function assertNameFree(db: DbOrTx, companyId: number, name: string, excludeId?: number): void {
+  const wanted = name.toLocaleLowerCase("tr");
+  const clash = db
+    .select({ id: locations.id, name: locations.name })
+    .from(locations)
+    .where(eq(locations.companyId, companyId))
+    .all()
+    .some((l) => l.id !== excludeId && l.name.toLocaleLowerCase("tr") === wanted);
+  if (clash) throw new AppError("locationNameTaken");
+}
+
 export function createLocation(db: DbOrTx, actor: Actor, companyId: number, input: LocationInput): Location {
   getCompany(db, actor, companyId);
+  assertNameFree(db, companyId, input.name);
   try {
     return db.insert(locations).values({ companyId, name: input.name }).returning().get();
   } catch (e) {
@@ -51,6 +64,7 @@ export function createLocation(db: DbOrTx, actor: Actor, companyId: number, inpu
 
 export function renameLocation(db: Db, actor: Actor, locationId: number, input: LocationInput): Location {
   const current = getLocation(db, actor, locationId);
+  assertNameFree(db, current.companyId, input.name, current.id);
   try {
     return db.update(locations).set({ name: input.name }).where(eq(locations.id, current.id)).returning().get();
   } catch (e) {

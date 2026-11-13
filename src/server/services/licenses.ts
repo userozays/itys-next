@@ -1,10 +1,13 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
+import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/dates";
 import type { Actor } from "../auth/sessions";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, licenseAssignments, licenses, type Currency } from "../db/schema";
 import { AppError } from "../errors";
 import type { LicenseInput } from "../validation";
+import { searchFold } from "../../lib/turkish";
+import { trFold, trKey } from "../db/turkish-sql";
 import { getAsset } from "./assets";
 import { getCompany } from "./companies";
 
@@ -47,10 +50,17 @@ const viewColumns = {
 
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
-export function listLicenses(db: Db, actor: Actor, companyId: number, q?: string): LicenseView[] {
+export function listLicenses(
+  db: Db,
+  actor: Actor,
+  companyId: number,
+  q?: string,
+  expiry?: ExpiryFilter,
+  today: string = todayIso(),
+): LicenseView[] {
   getCompany(db, actor, companyId);
   const term = q?.trim();
-  const pattern = term ? `%${escapeLike(term)}%` : null;
+  const pattern = term ? `%${escapeLike(searchFold(term))}%` : null;
   return db
     .select(viewColumns)
     .from(licenses)
@@ -58,11 +68,16 @@ export function listLicenses(db: Db, actor: Actor, companyId: number, q?: string
       and(
         eq(licenses.companyId, companyId),
         pattern
-          ? sql`(${licenses.name} like ${pattern} escape '\\' or ${licenses.vendor} like ${pattern} escape '\\')`
+          ? sql`(${trFold(licenses.name)} like ${pattern} escape '\\' or ${trFold(licenses.vendor)} like ${pattern} escape '\\')`
           : undefined,
+        expiry === "soon"
+          ? and(gte(licenses.expiryDate, today), lte(licenses.expiryDate, addDaysIso(today, SOON_DAYS)))
+          : expiry === "expired"
+            ? lt(licenses.expiryDate, today)
+            : undefined,
       ),
     )
-    .orderBy(asc(licenses.name), asc(licenses.id))
+    .orderBy(trKey(licenses.name), asc(licenses.id))
     .all();
 }
 
@@ -129,7 +144,7 @@ export function listAssignedAssets(db: Db, actor: Actor, licenseId: number): Ass
     .from(licenseAssignments)
     .innerJoin(assets, eq(assets.id, licenseAssignments.assetId))
     .where(eq(licenseAssignments.licenseId, current.id))
-    .orderBy(asc(assets.name), asc(assets.id))
+    .orderBy(trKey(assets.name), asc(assets.id))
     .all();
 }
 
@@ -141,7 +156,7 @@ export function listLicensesForAsset(db: Db, actor: Actor, assetId: number): Lic
     .from(licenseAssignments)
     .innerJoin(licenses, eq(licenses.id, licenseAssignments.licenseId))
     .where(eq(licenseAssignments.assetId, asset.id))
-    .orderBy(asc(licenses.name))
+    .orderBy(trKey(licenses.name), asc(licenses.id))
     .all();
 }
 

@@ -11,7 +11,7 @@ import { SelectBox } from "@/components/select-box";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, todayIso } from "@/lib/dates";
+import { expiryFilters, formatDate, todayIso, type ExpiryFilter } from "@/lib/dates";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
 import { assetStatuses, assetTypes, type AssetStatus, type AssetType } from "@/server/db/schema";
@@ -48,13 +48,14 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
     sort: oneOf<AssetSortKey>(assetSortKeys, one(params.sort)) ?? "name",
     dir: one(params.dir) === "desc" ? ("desc" as const) : ("asc" as const),
     page: Number(one(params.page)) || 1,
+    warranty: oneOf<ExpiryFilter>(expiryFilters, one(params.warranty)),
   };
   const db = getDb();
   const { rows, total, page, pageCount } = listAssets(db, actor, company.id, filter);
   const locations = listLocations(db, actor, company.id);
   const locale = await getLocale();
   const today = todayIso();
-  const filtered = Boolean(filter.q || filter.type || filter.status || filter.locationId);
+  const filtered = Boolean(filter.q || filter.type || filter.status || filter.locationId || filter.warranty);
 
   /** Current filter as a query string, with some keys replaced. */
   const href = (changes: Record<string, string | number | undefined>) => {
@@ -64,6 +65,7 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
       type: filter.type,
       status: filter.status,
       location: filter.locationId,
+      warranty: filter.warranty,
       sort: filter.sort === "name" ? undefined : filter.sort,
       dir: filter.dir === "asc" ? undefined : filter.dir,
       page: page === 1 ? undefined : page,
@@ -142,6 +144,15 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
         />
         {filter.sort !== "name" ? <input type="hidden" name="sort" value={filter.sort} /> : null}
         {filter.dir === "desc" ? <input type="hidden" name="dir" value="desc" /> : null}
+        <SelectBox
+          name="warranty"
+          ariaLabel={t("assets.warrantyFilter.label")}
+          defaultValue={filter.warranty ?? ""}
+          options={[
+            { value: "", label: t("assets.warrantyFilter.all") },
+            ...expiryFilters.map((v) => ({ value: v, label: t(`assets.warrantyFilter.${v}`) })),
+          ]}
+        />
         {filtered ? (
           <button type="button" data-filter-clear className={buttonVariants({ variant: "ghost" })}>
             {t("assets.clear")}

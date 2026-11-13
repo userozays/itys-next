@@ -4,13 +4,14 @@ import Link from "next/link";
 import { LicenseExpiryBadge } from "@/components/asset-badges";
 import { EmptyState } from "@/components/empty-state";
 import { FilterForm } from "@/components/filter-form";
+import { SelectBox } from "@/components/select-box";
 import { RememberListUrl } from "@/components/list-memory";
 import { PageHeader } from "@/components/page-header";
 import { SeatUsage } from "@/components/seat-usage";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, todayIso } from "@/lib/dates";
+import { expiryFilters, formatDate, todayIso } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
@@ -33,9 +34,12 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
     );
   }
 
-  const raw = (await searchParams).q;
-  const q = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
-  const rows = listLicenses(getDb(), actor, company.id, q);
+  const params = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const q = one(params.q).trim();
+  const expiry = expiryFilters.find((v) => v === one(params.expiry));
+  const filtered = Boolean(q || expiry);
+  const rows = listLicenses(getDb(), actor, company.id, q, expiry);
   const locale = await getLocale();
   const today = todayIso();
 
@@ -60,7 +64,16 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
           aria-label={t("licenses.search")}
           className="w-full sm:w-64"
         />
-        {q ? (
+        <SelectBox
+          name="expiry"
+          ariaLabel={t("licenses.expiryFilter.label")}
+          defaultValue={expiry ?? ""}
+          options={[
+            { value: "", label: t("licenses.expiryFilter.all") },
+            ...expiryFilters.map((v) => ({ value: v, label: t(`licenses.expiryFilter.${v}`) })),
+          ]}
+        />
+        {filtered ? (
           <button type="button" data-filter-clear className={buttonVariants({ variant: "ghost" })}>
             {t("assets.clear")}
           </button>
@@ -69,9 +82,9 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
 
       {rows.length === 0 ? (
         <EmptyState
-          title={q ? t("licenses.emptyFiltered") : t("licenses.empty")}
+          title={filtered ? t("licenses.emptyFiltered") : t("licenses.empty")}
           action={
-            q ? null : (
+            filtered ? null : (
               <Link href="/licenses/new" className={buttonVariants()}>
                 {t("licenses.addFirst")}
               </Link>

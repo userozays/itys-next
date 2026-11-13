@@ -190,3 +190,36 @@ describe("license input validation", () => {
     expect(parse({ currency: "GBP" }).success).toBe(false);
   });
 });
+
+describe("Turkish search and order for licenses (QA O2, O3)", () => {
+  it("finds and sorts licenses the Turkish way, and lists assigned devices in order", async () => {
+    const { db, a, admin } = await world();
+    for (const name of ["TeamViewer", "TEST lisansı", "Çizim Programı", "İş Takibi", "antivirüs"]) createLicense(db, admin, a, input({ name }));
+    const order = listLicenses(db, admin, a).map((l) => l.name);
+    expect(order).toEqual(["antivirüs", "Çizim Programı", "İş Takibi", "TeamViewer", "TEST lisansı"]);
+    expect(listLicenses(db, admin, a, "iş takibi").map((l) => l.name)).toEqual(["İş Takibi"]);
+    expect(listLicenses(db, admin, a, "ANTIVIRUS").map((l) => l.name)).toEqual(["antivirüs"]);
+
+    const license = createLicense(db, admin, a, input({ name: "Ofis" }));
+    for (const name of ["Zirve PC", "Üretim PC", "Çağrı PC"]) assignLicense(db, admin, license.id, createAsset(db, admin, a, assetInput({ name })).id);
+    expect(listAssignedAssets(db, admin, license.id).map((x) => x.name)).toEqual(["Çağrı PC", "Üretim PC", "Zirve PC"]);
+  });
+});
+
+describe("expiry filter (QA O9)", () => {
+  it("lists licenses expiring within 30 days or already expired", async () => {
+    const { db, a, admin } = await world();
+    for (const [name, expiryDate] of [
+      ["Bugün", "2026-06-01"],
+      ["Ay Sonu", "2026-07-01"],
+      ["Uzak", "2026-09-01"],
+      ["Geçen Ay", "2026-05-01"],
+      ["Süresiz", null],
+    ] as const) {
+      createLicense(db, admin, a, input({ name, expiryDate }));
+    }
+    const list = (expiry: "soon" | "expired") => listLicenses(db, admin, a, "", expiry, "2026-06-01").map((l) => l.name);
+    expect(list("soon")).toEqual(["Ay Sonu", "Bugün"]);
+    expect(list("expired")).toEqual(["Geçen Ay"]);
+  });
+});

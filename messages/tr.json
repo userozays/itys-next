@@ -72,7 +72,12 @@
     "addFirst": "İlk cihazı ekle",
     "licenseCount": "Lisans",
     "expiriesTitle": "Yaklaşan ve yeni dolan süreler",
-    "expiriesEmpty": "Önümüzdeki 30 gün içinde dolan garanti ya da lisans yok."
+    "expiriesEmpty": "Önümüzdeki 30 gün içinde dolan garanti ya da lisans yok.",
+    "expiriesMore": "{total} kayıttan ilk {shown} tanesi gösteriliyor.",
+    "seeWarrantySoon": "Garantisi bitmek üzere olan cihazlar",
+    "seeWarrantyExpired": "Garantisi biten cihazlar",
+    "seeLicensesSoon": "Süresi dolmak üzere olan lisanslar",
+    "seeLicensesExpired": "Süresi dolan lisanslar"
   },
   "companies": {
     "title": "Şirketler",
@@ -142,7 +147,11 @@
     "importNoName": "Cihaz adı sütunu eşleştirilmemiş.",
     "importNothingValid": "Eklenecek geçerli satır yok.",
     "telegramTokenMissing": "Telegram'ı açmak için bot anahtarı gir.",
-    "noChannelEnabled": "Önce e-posta ya da Telegram bildirimini açıp kaydet."
+    "noChannelEnabled": "Önce e-posta ya da Telegram bildirimini açıp kaydet.",
+    "unexpected": "Sunucudan yanıt alınamadı. Bağlantını kontrol et; işlem yine de tamamlanmış olabilir, sayfayı yenileyip bak.",
+    "tagUsedBy": "Bu etiket no zaten {name} cihazında kullanılıyor.",
+    "serialUsedBy": "Bu seri no {tag} ({name}) cihazında kayıtlı.",
+    "macUsedBy": "Bu MAC adresi {tag} ({name}) cihazında kayıtlı."
   },
   "validation": {
     "required": "Bu alan zorunlu.",
@@ -159,7 +168,10 @@
     "port": "1 ile 65535 arasında bir port gir.",
     "chatId": "Sayı ya da @kanaladi biçiminde olmalı.",
     "tooMany": "En fazla 20 adres.",
-    "ram": "GB cinsinden tam sayı gir (ör. 16)."
+    "ram": "GB cinsinden tam sayı gir (ör. 16).",
+    "ip": "Geçerli bir IP adresi gir (ör. 192.168.1.20).",
+    "mac": "Geçerli bir MAC adresi gir (ör. 00:1A:2B:3C:4D:5E).",
+    "warrantyBeforePurchase": "Garanti bitişi alım tarihinden önce olamaz."
   },
   "noCompany": {
     "title": "Çalışılan şirket yok",
@@ -248,7 +260,14 @@
     "noSpecs": "Teknik özellik girilmemiş.",
     "specsFilled": "Özellikler aynı modeldeki {name} ({tag}) cihazından dolduruldu. Farklıysa düzelt.",
     "specsFound": "Aynı modelde kayıtlı bir cihaz var: {name} ({tag}).",
-    "specsApply": "Özelliklerini kullan"
+    "specsApply": "Özelliklerini kullan",
+    "sharedIp": "Bu IP adresi başka cihazlarda da kayıtlı:",
+    "warrantyFilter": {
+      "label": "Garanti",
+      "all": "Tüm garantiler",
+      "soon": "Garanti bitiyor (30 gün)",
+      "expired": "Garanti bitti"
+    }
   },
   "locations": {
     "title": "Konumlar",
@@ -307,7 +326,13 @@
     "deleteTitle": "Lisans silinsin mi?",
     "deleteDescription": "{name} ve cihaz atamaları kalıcı olarak silinir. Bu işlem geri alınamaz.",
     "onDevice": "Bu cihazdaki lisanslar",
-    "noneOnDevice": "Bu cihaza atanmış lisans yok."
+    "noneOnDevice": "Bu cihaza atanmış lisans yok.",
+    "expiryFilter": {
+      "label": "Süre",
+      "all": "Tüm süreler",
+      "soon": "Süresi doluyor (30 gün)",
+      "expired": "Süresi doldu"
+    }
   },
   "import": {
     "title": "Cihazları içe aktar",
@@ -351,7 +376,14 @@
       "tooLong": "çok uzun",
       "tagTaken": "bu etiket şirkette zaten var",
       "tagDuplicate": "bu etiket dosyada daha önce geçiyor",
-      "ram": "geçersiz RAM (GB cinsinden tam sayı)"
+      "ram": "geçersiz RAM (GB cinsinden tam sayı)",
+      "ip": "geçersiz IP adresi",
+      "mac": "geçersiz MAC adresi",
+      "warrantyBeforePurchase": "alım tarihinden önce",
+      "serialTaken": "bu seri no şirkette başka cihazda kayıtlı",
+      "serialDuplicate": "bu seri no dosyada daha önce geçiyor",
+      "macTaken": "bu MAC adresi şirkette başka cihazda kayıtlı",
+      "macDuplicate": "bu MAC adresi dosyada daha önce geçiyor"
     }
   },
   "labels": {
@@ -431,5 +463,9 @@
     },
     "takePhoto": "Fotoğraf çekerek oku",
     "reading": "Okunuyor…"
+  },
+  "otherCompany": {
+    "notice": "Bu kayıt {company} şirketine ait. Şu an {active} şirketinde çalışıyorsun; listeye dönüş ve yeni kayıtlar o şirkete gider.",
+    "switch": "{company} şirketine geç"
   }
 }

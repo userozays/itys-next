@@ -6,7 +6,7 @@ import { AppError } from "../errors";
 import { fold, guessMapping, sanitizeMapping, type Mapping } from "../import/mapping";
 import { normalizeRow, type NormalizedRow, type RowIssue } from "../import/normalize";
 import type { ParsedSheet } from "../import/parse";
-import { createAsset, tagAllocator } from "./assets";
+import { createAsset, meaningfulSerial, tagAllocator } from "./assets";
 import { getCompany } from "./companies";
 import { createLocation } from "./locations";
 
@@ -81,13 +81,22 @@ export function setImportMapping(db: Db, actor: Actor, jobId: number, raw: Recor
 }
 
 function preview(db: DbOrTx, job: ImportJob): ImportPreview {
-  const existingTags = new Set(
-    db.select({ tag: assets.tag }).from(assets).where(eq(assets.companyId, job.companyId)).all().map((r) => r.tag),
-  );
+  // Tags, serials and MAC addresses already used in the company, in capitals (QA O4, O6).
+  const existing = db
+    .select({ tag: assets.tag, serial: assets.serial, mac: assets.macAddress })
+    .from(assets)
+    .where(eq(assets.companyId, job.companyId))
+    .all();
+  const upper = (values: (string | null)[]) => new Set(values.flatMap((v) => (v ? [v.toUpperCase()] : [])));
+  const taken = {
+    tag: upper(existing.map((r) => r.tag)),
+    serial: upper(existing.map((r) => r.serial)),
+    macAddress: upper(existing.map((r) => r.mac)),
+  };
+  const seen = { tag: new Set<string>(), serial: new Set<string>(), macAddress: new Set<string>() };
   const existingLocations = new Set(
     db.select({ name: locations.name }).from(locations).where(eq(locations.companyId, job.companyId)).all().map((r) => fold(r.name)),
   );
-  const seenTags = new Set<string>();
   const newLocations = new Map<string, string>();
   const valid: ImportPreview["valid"] = [];
   const skipped: SkippedRow[] = [];
@@ -97,10 +106,22 @@ function preview(db: DbOrTx, job: ImportJob): ImportPreview {
     const result = normalizeRow(cells, job.mapping);
     if (!result.ok) return void skipped.push({ row, issues: result.issues });
 
-    const { tag } = result.value.input;
-    if (tag && existingTags.has(tag)) return void skipped.push({ row, issues: [{ field: "tag", code: "tagTaken" }] });
-    if (tag && seenTags.has(tag)) return void skipped.push({ row, issues: [{ field: "tag", code: "tagDuplicate" }] });
-    if (tag) seenTags.add(tag);
+    const { tag, serial, macAddress } = result.value.input;
+    const keys = {
+      tag: tag?.toUpperCase(),
+      serial: serial && meaningfulSerial(serial) ? serial.toUpperCase() : undefined,
+      macAddress: macAddress?.toUpperCase(),
+    };
+    const issues: RowIssue[] = [];
+    for (const field of ["tag", "serial", "macAddress"] as const) {
+      const key = keys[field];
+      if (!key) continue;
+      const prefix = field === "macAddress" ? "mac" : field;
+      if (taken[field].has(key)) issues.push({ field, code: `${prefix}Taken` });
+      else if (seen[field].has(key)) issues.push({ field, code: `${prefix}Duplicate` });
+    }
+    if (issues.length > 0) return void skipped.push({ row, issues });
+    for (const field of ["tag", "serial", "macAddress"] as const) if (keys[field]) seen[field].add(keys[field]!);
 
     const location = result.value.locationName;
     if (location && !existingLocations.has(fold(location)) && !newLocations.has(fold(location))) {

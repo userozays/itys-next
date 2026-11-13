@@ -52,6 +52,34 @@ const optionalDate = z
   .nullable()
   .optional();
 
+/** "00:1a:2b:3c:4d:5e", "00-1A-2B-3C-4D-5E", "001A.2B3C.4D5E" or "001A2B3C4D5E" → "00:1A:2B:3C:4D:5E"; anything else → null. */
+export function normalizeMac(text: string): string | null {
+  const hex = text.trim().replace(/[\s:.-]/g, "");
+  return /^[0-9A-Fa-f]{12}$/.test(hex) ? hex.toUpperCase().match(/../g)!.join(":") : null;
+}
+
+const optionalIp = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || z.ipv4().safeParse(v).success || z.ipv6().safeParse(v).success, "ip")
+  .transform((v) => (v === "" ? null : v.toLowerCase()))
+  .nullable()
+  .optional();
+
+const optionalMac = z
+  .string()
+  .transform((v, ctx) => {
+    if (v.trim() === "") return null;
+    const mac = normalizeMac(v);
+    if (!mac) {
+      ctx.addIssue({ code: "custom", message: "mac" });
+      return z.NEVER;
+    }
+    return mac;
+  })
+  .nullable()
+  .optional();
+
 /** RAM in GB: accepts 16, "16" and "16 GB"; empty means unknown. */
 const optionalRam = z.preprocess(
   (v) => {
@@ -69,7 +97,8 @@ export const assetInput = z.object({
     .string()
     .trim()
     .regex(/^[A-Za-z0-9._-]{0,32}$/, "tag")
-    .transform((v) => (v === "" ? null : v))
+    // Stored in capitals, so "d-0054" and "D-0054" are the same tag (QA O4).
+    .transform((v) => (v === "" ? null : v.toUpperCase()))
     .nullable()
     .optional(),
   name: z.string().trim().min(1, "required").max(120, "tooLong"),
@@ -88,8 +117,17 @@ export const assetInput = z.object({
   storage: optionalText(120),
   os: optionalText(120),
   hostname: optionalText(120),
-  ipAddress: optionalText(45),
-  macAddress: optionalText(17),
+  ipAddress: optionalIp,
+  macAddress: optionalMac,
+}).refine((v) => !(v.purchaseDate && v.warrantyEnd && v.warrantyEnd < v.purchaseDate), {
+  // QA O5: a warranty cannot end before the device was bought.
+  path: ["warrantyEnd"],
+  message: "warrantyBeforePurchase",
+  // Checked even when other fields have problems, so the form shows them all at once (QA O7).
+  when: ({ value }) => {
+    const dates = value as { purchaseDate?: unknown; warrantyEnd?: unknown };
+    return typeof dates?.purchaseDate === "string" && typeof dates?.warrantyEnd === "string";
+  },
 });
 
 export const locationInput = z.object({ name: z.string().trim().min(1, "required").max(80, "tooLong") });

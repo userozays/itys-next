@@ -20,7 +20,7 @@ async function openLicense(page: Page, name: string) {
 
 test("admin adds a license; bad seats and cost are rejected first", async ({ page }) => {
   await signInAdmin(page);
-  await page.getByRole("link", { name: "Lisanslar" }).click();
+  await page.getByRole("link", { name: "Lisanslar", exact: true }).click();
   await expect(page.getByText("Bu şirkette henüz lisans yok.")).toBeVisible();
   await page.getByRole("link", { name: "Yeni lisans" }).click();
 

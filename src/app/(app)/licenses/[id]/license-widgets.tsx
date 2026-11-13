@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { FormError, useFormAction } from "@/components/form";
+import { useSafeCall } from "@/components/safe-call";
 import { SelectBox } from "@/components/select-box";
 import { Button } from "@/components/ui/button";
 import { assignLicenseAction, revealLicenseKeyAction, unassignLicenseAction } from "../actions";
@@ -15,6 +16,7 @@ export function KeyReveal({ licenseId }: { licenseId: number }) {
   const [error, setError] = useState<string>();
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
+  const call = useSafeCall();
 
   if (key === null) {
     return (
@@ -24,7 +26,7 @@ export function KeyReveal({ licenseId }: { licenseId: number }) {
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              const result = await revealLicenseKeyAction(licenseId);
+              const result = await call(() => revealLicenseKeyAction(licenseId), (error) => ({ key: null, error }));
               setError(result.error);
               setKey(result.key);
             })
@@ -100,16 +102,30 @@ export function AssignForm({ licenseId, options }: { licenseId: number; options:
 export function UnassignButton({ licenseId, assetId, name }: { licenseId: number; assetId: number; name: string }) {
   const t = useTranslations("licenses");
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string>();
+  const call = useSafeCall();
   return (
-    <Button
+    <span className="flex items-center gap-2">
+      {error ? (
+        <span role="alert" className="text-xs text-destructive">
+          {error}
+        </span>
+      ) : null}
+      <Button
       variant="ghost"
       size="icon-sm"
       disabled={pending}
       aria-label={t("unassign", { name })}
       title={t("unassign", { name })}
-      onClick={() => startTransition(async () => void (await unassignLicenseAction(licenseId, assetId)))}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await call(() => unassignLicenseAction(licenseId, assetId), (message) => ({ error: message }));
+          setError(result.error);
+        })
+      }
     >
       <X aria-hidden />
     </Button>
+    </span>
   );
 }

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { switchCompanyAction } from "@/app/(app)/actions";
+import { useSafeCall } from "@/components/safe-call";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Option = { id: number; name: string };
@@ -10,6 +11,7 @@ type Option = { id: number; name: string };
 export function CompanySwitcher({ companies, activeId }: { companies: Option[]; activeId: number | null }) {
   const t = useTranslations("nav");
   const [pending, startTransition] = useTransition();
+  const call = useSafeCall();
 
   if (companies.length === 0) {
     return <span className="text-sm text-muted-foreground">{t("noCompany")}</span>;
@@ -21,7 +23,7 @@ export function CompanySwitcher({ companies, activeId }: { companies: Option[]; 
       items={companies.map((c) => ({ value: String(c.id), label: c.name }))}
       disabled={pending}
       onValueChange={(value) => {
-        if (value !== null) startTransition(() => switchCompanyAction(Number(value)));
+        if (value !== null) startTransition(() => call(() => switchCompanyAction(Number(value)), () => undefined));
       }}
     >
       <SelectTrigger aria-label={t("company")} data-company-id={activeId ?? ""} className="max-w-[14rem] min-w-0 font-medium">

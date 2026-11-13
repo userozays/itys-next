@@ -25,6 +25,17 @@ export type ErrorCode =
   | "telegramTokenMissing"
   | "noChannelEnabled";
 
+/** One problem with one form field. `key` is a full translation key ("validation.ip", "errors.serialUsedBy"). */
+export type FieldIssue = { field: string; key: string; params?: Record<string, string | number> };
+
+/** Several field problems reported together, so a form shows them all at once (QA O7). */
+export class FieldErrors extends Error {
+  constructor(public readonly issues: FieldIssue[]) {
+    super("field errors");
+    this.name = "FieldErrors";
+  }
+}
+
 export class AppError extends Error {
   constructor(public readonly code: ErrorCode) {
     super(code);

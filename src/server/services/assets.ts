@@ -1,11 +1,14 @@
-import { and, asc, desc, eq, inArray, isNotNull, like, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, like, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/dates";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, companies, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
-import { AppError } from "../errors";
-import type { AssetInput } from "../validation";
+import { AppError, FieldErrors, type FieldIssue } from "../errors";
+import { normalizeMac, type AssetInput } from "../validation";
+import { searchFold } from "../../lib/turkish";
 import { fold } from "../import/mapping";
+import { trFold, trKey } from "../db/turkish-sql";
 import { getCompany, listCompanies } from "./companies";
 
 export const PAGE_SIZE = 25;
@@ -21,6 +24,10 @@ export type AssetFilter = {
   sort?: AssetSortKey;
   dir?: "asc" | "desc";
   page?: number;
+  /** Devices whose warranty ends soon or has ended; retired devices are left out. */
+  warranty?: ExpiryFilter;
+  /** For tests; defaults to the real date. */
+  today?: string;
 };
 
 export type AssetListItem = Asset & { locationName: string | null };
@@ -29,9 +36,10 @@ export type AssetSummary = { total: number; byType: Record<string, number>; bySt
 const isUniqueViolation = (e: unknown) => e instanceof Error && /UNIQUE/.test(e.message);
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
+// Text columns sort by a Turkish key (src/lib/turkish.ts); SQLite alone would put Ç, İ, Ö, Ş, Ü after Z.
 const sortColumns = {
-  tag: assets.tag,
-  name: assets.name,
+  tag: trKey(assets.tag),
+  name: trKey(assets.name),
   type: assets.type,
   status: assets.status,
   warrantyEnd: assets.warrantyEnd,
@@ -71,8 +79,9 @@ function filterWhere(companyId: number, filter: AssetFilter): SQL | undefined {
   const conditions: (SQL | undefined)[] = [eq(assets.companyId, companyId)];
   const q = filter.q?.trim();
   if (q) {
-    const pattern = `%${escapeLike(q)}%`;
-    const match = (column: AnySQLiteColumn) => sql`${column} like ${pattern} escape '\\'`;
+    // Both sides are folded, so "AYŞE", "ayse" and "Ayşe" all match.
+    const pattern = `%${escapeLike(searchFold(q))}%`;
+    const match = (column: AnySQLiteColumn) => sql`${trFold(column)} like ${pattern} escape '\\'`;
     conditions.push(
       or(match(assets.tag), match(assets.name), match(assets.brand), match(assets.model), match(assets.serial), match(assets.assignedTo), match(assets.hostname), match(assets.ipAddress)),
     );
@@ -80,6 +89,15 @@ function filterWhere(companyId: number, filter: AssetFilter): SQL | undefined {
   if (filter.type) conditions.push(eq(assets.type, filter.type));
   if (filter.status) conditions.push(eq(assets.status, filter.status));
   if (filter.locationId) conditions.push(eq(assets.locationId, filter.locationId));
+  if (filter.warranty) {
+    const today = filter.today ?? todayIso();
+    conditions.push(ne(assets.status, "retired"));
+    conditions.push(
+      filter.warranty === "soon"
+        ? and(gte(assets.warrantyEnd, today), lte(assets.warrantyEnd, addDaysIso(today, SOON_DAYS)))
+        : lt(assets.warrantyEnd, today),
+    );
+  }
   return and(...conditions);
 }
 
@@ -184,6 +202,66 @@ function values(input: AssetInput) {
   };
 }
 
+/** A serial shorter than this (letters and digits only) is treated as "none": "-", "N/A", "yok". */
+const MIN_SERIAL_CHARS = 4;
+export const meaningfulSerial = (serial: string) => serial.replace(/[^\p{L}\p{N}]/gu, "").length >= MIN_SERIAL_CHARS;
+
+/**
+ * What would clash with another device of the same company: the tag (always
+ * unique), the serial number and the MAC address (QA O4, O6). Comparison
+ * ignores case. Takes the values as typed, so it can run before or after
+ * validation; values that are not valid are skipped here.
+ */
+export function assetConflicts(
+  db: DbOrTx,
+  companyId: number,
+  values: { tag?: string | null; serial?: string | null; macAddress?: string | null },
+  excludeAssetId?: number,
+): FieldIssue[] {
+  const others = (column: AnySQLiteColumn, value: string) =>
+    db
+      .select({ id: assets.id, tag: assets.tag, name: assets.name })
+      .from(assets)
+      .where(
+        and(
+          eq(assets.companyId, companyId),
+          sql`upper(${column}) = upper(${value})`,
+          excludeAssetId ? ne(assets.id, excludeAssetId) : undefined,
+        ),
+      )
+      .get();
+
+  const issues: FieldIssue[] = [];
+  const tag = values.tag?.trim();
+  if (tag && /^[A-Za-z0-9._-]{1,32}$/.test(tag)) {
+    const other = others(assets.tag, tag);
+    if (other) issues.push({ field: "tag", key: "errors.tagUsedBy", params: { name: other.name } });
+  }
+  const serial = values.serial?.trim();
+  if (serial && meaningfulSerial(serial)) {
+    const other = others(assets.serial, serial);
+    if (other) issues.push({ field: "serial", key: "errors.serialUsedBy", params: { tag: other.tag, name: other.name } });
+  }
+  const mac = values.macAddress ? normalizeMac(values.macAddress) : null;
+  if (mac) {
+    const other = others(assets.macAddress, mac);
+    if (other) issues.push({ field: "macAddress", key: "errors.macUsedBy", params: { tag: other.tag, name: other.name } });
+  }
+  return issues;
+}
+
+/** Other devices of the same company with this device's IP address; shown as a warning, not an error (QA O6). */
+export function devicesSharingIp(db: Db, actor: Actor, assetId: number): { id: number; tag: string; name: string }[] {
+  const asset = getAsset(db, actor, assetId);
+  if (!asset.ipAddress) return [];
+  return db
+    .select({ id: assets.id, tag: assets.tag, name: assets.name })
+    .from(assets)
+    .where(and(eq(assets.companyId, asset.companyId), eq(assets.ipAddress, asset.ipAddress), ne(assets.id, asset.id)))
+    .orderBy(trKey(assets.tag))
+    .all();
+}
+
 export function createAsset(
   db: DbOrTx,
   actor: Actor,
@@ -193,10 +271,12 @@ export function createAsset(
 ): Asset {
   getCompany(db, actor, companyId);
   assertLocationInCompany(db, companyId, input.locationId);
+  const conflicts = assetConflicts(db, companyId, input);
+  if (conflicts.length > 0) throw new FieldErrors(conflicts);
   try {
     return db
       .insert(assets)
-      .values({ ...values(input), companyId, source, tag: input.tag ?? tagAllocator(db, companyId)() })
+      .values({ ...values(input), companyId, source, tag: input.tag?.toUpperCase() ?? tagAllocator(db, companyId)() })
       .returning()
       .get();
   } catch (e) {
@@ -209,10 +289,12 @@ export function createAsset(
 export function updateAsset(db: Db, actor: Actor, assetId: number, input: AssetInput): Asset {
   const current = getAsset(db, actor, assetId);
   assertLocationInCompany(db, current.companyId, input.locationId);
+  const conflicts = assetConflicts(db, current.companyId, input, current.id);
+  if (conflicts.length > 0) throw new FieldErrors(conflicts);
   try {
     return db
       .update(assets)
-      .set({ ...values(input), tag: input.tag ?? current.tag, updatedAt: sql`(datetime('now'))` })
+      .set({ ...values(input), tag: input.tag?.toUpperCase() ?? current.tag, updatedAt: sql`(datetime('now'))` })
       .where(eq(assets.id, current.id))
       .returning()
       .get();
@@ -252,7 +334,7 @@ export function listAssetOptions(db: Db, actor: Actor, companyId: number): { id:
     .select({ id: assets.id, tag: assets.tag, name: assets.name })
     .from(assets)
     .where(eq(assets.companyId, companyId))
-    .orderBy(asc(assets.name), asc(assets.id))
+    .orderBy(trKey(assets.name), asc(assets.id))
     .all();
 }
 
@@ -270,7 +352,7 @@ export function listAssetsForLabels(
     .select({ id: assets.id, tag: assets.tag, name: assets.name })
     .from(assets)
     .where(filterWhere(companyId, filter))
-    .orderBy(asc(assets.tag), asc(assets.id))
+    .orderBy(trKey(assets.tag), asc(assets.id))
     .limit(MAX_LABELS)
     .all();
 }
@@ -278,11 +360,9 @@ export function listAssetsForLabels(
 /** Finds the device a printed label points at. */
 export function getAssetByTag(db: Db, actor: Actor, companyId: number, tag: string): { id: number } {
   getCompany(db, actor, companyId);
-  const row = db
-    .select({ id: assets.id })
-    .from(assets)
-    .where(and(eq(assets.companyId, companyId), eq(assets.tag, tag)))
-    .get();
+  const find = (match: SQL) => db.select({ id: assets.id }).from(assets).where(and(eq(assets.companyId, companyId), match)).get();
+  // Exact first; then ignoring case, for labels printed before tags were stored in capitals.
+  const row = find(eq(assets.tag, tag)) ?? find(sql`upper(${assets.tag}) = upper(${tag})`);
   if (!row) throw new AppError("notFound");
   return row;
 }

@@ -1,7 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { ZodError } from "zod";
 import type { FormState } from "@/lib/form-state";
-import { AppError } from "./errors";
+import { AppError, FieldErrors, type FieldIssue } from "./errors";
+
+/** Zod's issues as field issues; messages are keys under "validation.*". */
+export function zodIssues(error: ZodError): FieldIssue[] {
+  return error.issues.map((issue) => ({ field: String(issue.path[0] ?? ""), key: `validation.${issue.message}` }));
+}
 
 /** Runs a server action body and turns validation and domain errors into a
  *  translated FormState. Anything else (including redirects) propagates. */
@@ -11,12 +16,12 @@ export async function runForm(body: () => Promise<void>): Promise<FormState> {
     return { ok: true };
   } catch (e) {
     const t = await getTranslations();
-    if (e instanceof ZodError) {
+    const issues = e instanceof ZodError ? zodIssues(e) : e instanceof FieldErrors ? e.issues : null;
+    if (issues) {
+      // Every field gets its first problem, and all fields are reported in one go.
       const fieldErrors: Record<string, string> = {};
-      for (const issue of e.issues) {
-        const field = String(issue.path[0] ?? "");
-        const key = `validation.${issue.message}`;
-        fieldErrors[field] ??= t.has(key) ? t(key) : t("validation.invalid");
+      for (const issue of issues) {
+        fieldErrors[issue.field] ??= t.has(issue.key) ? t(issue.key, issue.params) : t("validation.invalid");
       }
       return { fieldErrors };
     }

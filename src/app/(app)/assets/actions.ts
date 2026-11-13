@@ -5,16 +5,24 @@ import { redirect } from "next/navigation";
 import type { FormState } from "@/lib/form-state";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
-import { AppError } from "@/server/errors";
-import { runForm, text } from "@/server/form";
-import { createAsset, deleteAsset, findModelSpecs, updateAsset, type ModelSpecs } from "@/server/services/assets";
+import { AppError, FieldErrors } from "@/server/errors";
+import { runForm, text, zodIssues } from "@/server/form";
+import {
+  assetConflicts,
+  createAsset,
+  deleteAsset,
+  findModelSpecs,
+  getAsset,
+  updateAsset,
+  type ModelSpecs,
+} from "@/server/services/assets";
 import { assetInput } from "@/server/validation";
 
 export async function saveAssetAction(form: FormData): Promise<FormState> {
   const actor = await requireActor();
   let savedId = 0;
   const state = await runForm(async () => {
-    const input = assetInput.parse({
+    const raw = {
       tag: text(form, "tag"),
       name: text(form, "name"),
       type: text(form, "type"),
@@ -34,16 +42,20 @@ export async function saveAssetAction(form: FormData): Promise<FormState> {
       hostname: text(form, "hostname"),
       ipAddress: text(form, "ipAddress"),
       macAddress: text(form, "macAddress"),
-    });
+    };
+    const db = getDb();
     const id = Number(form.get("id"));
-    if (id) {
-      savedId = updateAsset(getDb(), actor, id, input).id;
-    } else {
-      // New devices always go to the company the user is working in.
-      const company = await getActiveCompany(actor);
-      if (!company) throw new AppError("notFound");
-      savedId = createAsset(getDb(), actor, company.id, input).id;
+    // New devices always go to the company the user is working in; existing ones stay where they are.
+    const companyId = id ? getAsset(db, actor, id).companyId : (await getActiveCompany(actor))?.id;
+    if (!companyId) throw new AppError("notFound");
+
+    // Format problems and clashes with other devices are reported together (QA O7).
+    const parsed = assetInput.safeParse(raw);
+    const conflicts = assetConflicts(db, companyId, raw, id || undefined);
+    if (!parsed.success || conflicts.length > 0) {
+      throw new FieldErrors([...(parsed.success ? [] : zodIssues(parsed.error)), ...conflicts]);
     }
+    savedId = id ? updateAsset(db, actor, id, parsed.data).id : createAsset(db, actor, companyId, parsed.data).id;
     revalidatePath("/", "layout");
   });
   if (state.ok) redirect(`/assets/${savedId}`);

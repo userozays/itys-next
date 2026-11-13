@@ -57,6 +57,20 @@
       "when": 1794562166487,
       "tag": "0007_damp_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794564013513,
+      "tag": "0008_familiar_newton_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794564019834,
+      "tag": "0009_uppercase_tags",
+      "breakpoints": true
     }
   ]
 }

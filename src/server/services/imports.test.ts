@@ -144,3 +144,34 @@ describe("generated tags in an import (QA K2)", () => {
     ]);
   });
 });
+
+describe("duplicates in an import (QA O4, O6)", () => {
+  it("skips rows whose tag, serial or MAC is taken, in any case, or repeated in the file", async () => {
+    const db = testDb();
+    const a = addCompany(db, "A");
+    const admin = await addUser(db, "admin", "admin");
+    createAsset(db, admin, a, assetInput({ tag: "PC-1", serial: "SN-AAAA", macAddress: "00:00:00:00:00:01" }));
+
+    const jobId = createImportJob(db, admin, a, "a.csv", {
+      headers: ["Etiket No", "Cihaz Adı", "Seri No", "MAC Adresi", "IP Adresi"],
+      rows: [
+        ["pc-1", "Küçük Harfli Etiket", "", "", ""], // 2
+        ["", "Aynı Seri", "sn-aaaa", "", ""], // 3
+        ["", "Aynı MAC", "", "00-00-00-00-00-01", ""], // 4
+        ["", "Yeni", "SN-BBBB", "00:00:00:00:00:02", "10.0.0.9"], // 5
+        ["", "Dosyada Tekrar", "SN-BBBB", "000000000002", ""], // 6
+        ["", "Bozuk Adres", "", "zz", "999.1.1.1"], // 7
+      ],
+    });
+    const preview = previewImport(db, admin, jobId);
+    expect(preview.valid.map((v) => v.row)).toEqual([5]);
+    expect(preview.skipped).toEqual([
+      { row: 2, issues: [{ field: "tag", code: "tagTaken" }] },
+      { row: 3, issues: [{ field: "serial", code: "serialTaken" }] },
+      { row: 4, issues: [{ field: "macAddress", code: "macTaken" }] },
+      { row: 6, issues: [{ field: "serial", code: "serialDuplicate" }, { field: "macAddress", code: "macDuplicate" }] },
+      { row: 7, issues: [{ field: "ipAddress", code: "ip" }, { field: "macAddress", code: "mac" }] },
+    ]);
+    expect(runImport(db, admin, jobId)).toEqual({ imported: 1, skipped: 5 });
+  });
+});

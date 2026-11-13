@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { CheckField, Field, FormError, useFormAction } from "@/components/form";
+import { useSafeCall } from "@/components/safe-call";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FormState } from "@/lib/form-state";
@@ -126,7 +127,9 @@ export function NotificationActions() {
   const t = useTranslations("notifications");
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
-  const run = (action: () => Promise<FormState>) => startTransition(async () => setState(await action()));
+  const call = useSafeCall();
+  const run = (action: () => Promise<FormState>) =>
+    startTransition(async () => setState(await call(action, (error): FormState => ({ error }))));
 
   return (
     <div className="grid gap-2">
