@@ -1,7 +1,7 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
-import { companies, userCompanies, type Company } from "../db/schema";
+import { assets, companies, licenses, locations, userCompanies, type Company } from "../db/schema";
 import { AppError } from "../errors";
 import type { CompanyInput } from "../validation";
 
@@ -39,10 +39,14 @@ export function getCompany(db: DbOrTx, actor: Actor, companyId: number): Company
 }
 
 /** The company the actor is currently working in: the preferred one if they
- *  may access it, otherwise their first accessible active company. */
+ *  may access it, otherwise their first accessible active company. An admin may
+ *  also work in an inactive company, to look at its records (QA Ö7); nobody
+ *  lands in one without choosing it. */
 export function resolveActiveCompany(db: Db, actor: Actor, preferredId: number | null): Company | null {
-  const available = listCompanies(db, actor).filter((c) => c.active);
-  return available.find((c) => c.id === preferredId) ?? available[0] ?? null;
+  const accessible = listCompanies(db, actor);
+  const preferred = accessible.find((c) => c.id === preferredId);
+  if (preferred && (preferred.active || actor.role === "admin")) return preferred;
+  return accessible.find((c) => c.active) ?? null;
 }
 
 /** QA O4: "Akdeniz Lojistik" and "akdeniz lojistik" are the same company. */
@@ -78,4 +82,34 @@ export function updateCompany(db: Db, actor: Actor, companyId: number, input: Co
     if (isUniqueViolation(e)) throw new AppError("companyNameTaken");
     throw e;
   }
+}
+
+/** Devices, licenses and locations per company; a company with none can be deleted (QA Ö8). */
+export function companyRecordCounts(db: DbOrTx, actor: Actor): Map<number, number> {
+  assertAdmin(actor);
+  const counts = new Map<number, number>();
+  for (const table of [assets, licenses, locations]) {
+    const rows = db
+      .select({ companyId: table.companyId, n: sql<number>`count(*)` })
+      .from(table)
+      .groupBy(table.companyId)
+      .all();
+    for (const r of rows) counts.set(r.companyId, (counts.get(r.companyId) ?? 0) + r.n);
+  }
+  return counts;
+}
+
+/**
+ * Permanently deletes a company that has no devices, licenses or locations, for
+ * one added by mistake. A company with records is made inactive instead, so
+ * nothing is lost (QA Ö8). Technician assignments and unfinished imports go with it.
+ */
+export function deleteCompany(db: Db, actor: Actor, companyId: number): void {
+  assertAdmin(actor);
+  db.transaction((tx) => {
+    const company = tx.select({ id: companies.id }).from(companies).where(eq(companies.id, companyId)).get();
+    if (!company) throw new AppError("notFound");
+    if ((companyRecordCounts(tx, actor).get(companyId) ?? 0) > 0) throw new AppError("companyHasRecords");
+    tx.delete(companies).where(eq(companies.id, companyId)).run();
+  });
 }

@@ -39,7 +39,9 @@
     "assets": "Hardware",
     "locations": "Locations",
     "licenses": "Licenses",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "inactiveCompanies": "Inactive companies",
+    "inactiveSuffix": "(inactive)"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -90,7 +92,9 @@
     "phone": "Phone",
     "notes": "Notes",
     "active": "Active (visible to technicians)",
-    "empty": "No companies yet."
+    "empty": "No companies yet.",
+    "deleteTitle": "Delete the company permanently?",
+    "deleteDescription": "{name} and its technician assignments are deleted permanently. It has no records, so nothing else is removed. This cannot be undone."
   },
   "users": {
     "title": "Users",
@@ -114,7 +118,9 @@
     "resetPasswordFor": "New password for {username}",
     "resetPasswordHint": "The user's open sessions are ended.",
     "newPassword": "New password",
-    "inactiveSuffix": "(inactive)"
+    "inactiveSuffix": "(inactive)",
+    "deleteTitle": "Delete the user permanently?",
+    "deleteDescription": "The account {name}, its sessions and company assignments are deleted permanently. Devices and licenses are not affected. To only block access, make the user inactive instead. This cannot be undone."
   },
   "account": {
     "title": "My account",
@@ -157,7 +163,9 @@
     "macUsedBy": "This MAC address is recorded on {tag} ({name}).",
     "retiredAsset": "Licenses cannot be assigned to a retired device.",
     "chooseAsset": "Choose a device first.",
-    "inactiveCompany": "An inactive company cannot be assigned to a technician."
+    "inactiveCompany": "An inactive company cannot be assigned to a technician.",
+    "companyHasRecords": "This company has devices, licenses or locations and cannot be deleted. Make it inactive to keep its records.",
+    "cannotDeleteSelf": "You cannot delete your own account."
   },
   "validation": {
     "required": "This field is required.",
@@ -502,5 +510,9 @@
     "csv": "CSV (.csv)",
     "assetsFile": "devices",
     "licensesFile": "licenses"
+  },
+  "inactiveCompany": {
+    "notice": "{name} is an inactive company: you can view and edit its records, but no expiry warnings are sent and technicians do not see it.",
+    "manage": "Manage companies"
   }
 }

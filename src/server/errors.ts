@@ -5,6 +5,8 @@ export type ErrorCode =
   | "usernameTaken"
   | "companyNameTaken"
   | "inactiveCompany"
+  | "companyHasRecords"
+  | "cannotDeleteSelf"
   | "lastAdmin"
   | "setupDone"
   | "wrongPassword"

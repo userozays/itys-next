@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
-import { listCompanies } from "@/server/services/companies";
+import { companyRecordCounts, listCompanies } from "@/server/services/companies";
 import { CompanyDialog } from "./company-dialog";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteCompanyAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("companies"))("title") };
@@ -18,6 +20,7 @@ export default async function CompaniesPage() {
   const t = await getTranslations();
   const companies = listCompanies(getDb(), actor);
   const isAdmin = actor.role === "admin";
+  const recordCounts = isAdmin ? companyRecordCounts(getDb(), actor) : new Map<number, number>();
 
   return (
     <>
@@ -65,6 +68,19 @@ export default async function CompaniesPage() {
                           </Button>
                         }
                       />
+                      {/* Only empty companies can be deleted; others are made inactive (QA Ö8). */}
+                      {(recordCounts.get(c.id) ?? 0) === 0 ? (
+                        <ConfirmDelete
+                          title={t("companies.deleteTitle")}
+                          description={t("companies.deleteDescription", { name: c.name })}
+                          action={deleteCompanyAction.bind(null, c.id)}
+                          trigger={
+                            <Button variant="ghost" size="sm" aria-label={`${t("common.delete")}: ${c.name}`}>
+                              {t("common.delete")}
+                            </Button>
+                          }
+                        />
+                      ) : null}
                     </TableCell>
                   ) : null}
                 </TableRow>

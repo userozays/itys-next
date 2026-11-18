@@ -5,7 +5,7 @@ import type { FormState } from "@/lib/form-state";
 import { requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
 import { checked, runForm, text } from "@/server/form";
-import { createCompany, updateCompany } from "@/server/services/companies";
+import { createCompany, deleteCompany, updateCompany } from "@/server/services/companies";
 import { companyInput } from "@/server/validation";
 
 export async function saveCompanyAction(form: FormData): Promise<FormState> {
@@ -21,6 +21,14 @@ export async function saveCompanyAction(form: FormData): Promise<FormState> {
     const id = Number(form.get("id"));
     if (id) updateCompany(getDb(), actor, id, input);
     else createCompany(getDb(), actor, input);
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function deleteCompanyAction(companyId: number): Promise<FormState> {
+  const actor = await requireActor();
+  return runForm(async () => {
+    deleteCompany(getDb(), actor, companyId);
     revalidatePath("/", "layout");
   });
 }

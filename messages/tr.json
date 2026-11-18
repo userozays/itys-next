@@ -39,7 +39,9 @@
     "assets": "Donanım",
     "locations": "Konumlar",
     "licenses": "Lisanslar",
-    "notifications": "Bildirimler"
+    "notifications": "Bildirimler",
+    "inactiveCompanies": "Pasif şirketler",
+    "inactiveSuffix": "(pasif)"
   },
   "auth": {
     "loginTitle": "Giriş yap",
@@ -90,7 +92,9 @@
     "phone": "Telefon",
     "notes": "Notlar",
     "active": "Aktif (teknisyenler görebilir)",
-    "empty": "Henüz şirket yok."
+    "empty": "Henüz şirket yok.",
+    "deleteTitle": "Şirket kalıcı olarak silinsin mi?",
+    "deleteDescription": "{name} ve teknisyen atamaları kalıcı olarak silinir. Şirkette kayıt olmadığı için başka bir şey silinmez. Bu işlem geri alınamaz."
   },
   "users": {
     "title": "Kullanıcılar",
@@ -114,7 +118,9 @@
     "resetPasswordFor": "{username} için yeni parola",
     "resetPasswordHint": "Kullanıcının açık oturumları kapatılır.",
     "newPassword": "Yeni parola",
-    "inactiveSuffix": "(pasif)"
+    "inactiveSuffix": "(pasif)",
+    "deleteTitle": "Kullanıcı kalıcı olarak silinsin mi?",
+    "deleteDescription": "{name} hesabı, oturumları ve şirket atamaları kalıcı olarak silinir. Cihaz ve lisans kayıtları etkilenmez. Yalnızca erişimi kapatmak istiyorsan bunun yerine kullanıcıyı pasif yap. Bu işlem geri alınamaz."
   },
   "account": {
     "title": "Hesabım",
@@ -157,7 +163,9 @@
     "macUsedBy": "Bu MAC adresi {tag} ({name}) cihazında kayıtlı.",
     "retiredAsset": "Hurda durumdaki cihaza lisans atanamaz.",
     "chooseAsset": "Önce bir cihaz seç.",
-    "inactiveCompany": "Pasif şirket teknisyene atanamaz."
+    "inactiveCompany": "Pasif şirket teknisyene atanamaz.",
+    "companyHasRecords": "Bu şirkette cihaz, lisans ya da konum kaydı var; kalıcı silinemez. Kayıtları saklamak için şirketi pasif yap.",
+    "cannotDeleteSelf": "Kendi hesabını silemezsin."
   },
   "validation": {
     "required": "Bu alan zorunlu.",
@@ -502,5 +510,9 @@
     "csv": "CSV (.csv)",
     "assetsFile": "cihazlar",
     "licensesFile": "lisanslar"
+  },
+  "inactiveCompany": {
+    "notice": "{name} pasif bir şirket: kayıtları görebilir ve düzenleyebilirsin, ama bitiş uyarıları gönderilmez ve teknisyenler bu şirketi görmez.",
+    "manage": "Şirketleri yönet"
   }
 }

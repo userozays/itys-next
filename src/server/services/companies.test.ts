@@ -47,7 +47,7 @@ describe("company isolation", () => {
     expect(resolveActiveCompany(db, techA, null)?.id).toBe(a);
     expect(resolveActiveCompany(db, techNone, a)).toBeNull();
     expect(resolveActiveCompany(db, admin, b)?.id).toBe(b);
-    expect(resolveActiveCompany(db, admin, closed)?.id).toBe(a);
+    expect(resolveActiveCompany(db, admin, closed)?.id).toBe(closed); // admins may open an inactive company (QA Ö7)
   });
 });
 

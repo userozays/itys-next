@@ -9,6 +9,8 @@ import { getDb } from "@/server/db/client";
 import { listCompanies } from "@/server/services/companies";
 import { listUsers } from "@/server/services/users";
 import { ResetPasswordDialog, UserDialog } from "./user-dialogs";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteUserAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("users"))("title") };
@@ -75,6 +77,18 @@ export default async function UsersPage() {
                       </Button>
                     }
                   />
+                  {u.id === actor.id ? null : (
+                    <ConfirmDelete
+                      title={t("users.deleteTitle")}
+                      description={t("users.deleteDescription", { name: u.username })}
+                      action={deleteUserAction.bind(null, u.id)}
+                      trigger={
+                        <Button variant="ghost" size="sm" aria-label={`${t("common.delete")}: ${u.username}`}>
+                          {t("common.delete")}
+                        </Button>
+                      }
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))}

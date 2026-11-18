@@ -10,9 +10,8 @@ import { listCompanies } from "@/server/services/companies";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await requireActor();
   const t = await getTranslations();
-  const companies = listCompanies(getDb(), actor)
-    .filter((c) => c.active)
-    .map((c) => ({ id: c.id, name: c.name }));
+  // Technicians only ever get active companies; admins also see inactive ones, listed apart (QA Ö7).
+  const companies = listCompanies(getDb(), actor).map((c) => ({ id: c.id, name: c.name, active: c.active }));
   const active = await getActiveCompany(actor);
   const isAdmin = actor.role === "admin";
 
@@ -44,6 +43,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="border-b px-4 py-1.5 md:hidden print:hidden">
           <NavLinks isAdmin={isAdmin} orientation="horizontal" />
         </div>
+        {active && !active.active ? (
+          <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-muted px-4 py-2 text-sm print:hidden">
+            <span>{t("inactiveCompany.notice", { name: active.name })}</span>
+            <Link href="/companies" className="font-medium underline underline-offset-4">
+              {t("inactiveCompany.manage")}
+            </Link>
+          </div>
+        ) : null}
         <main id="main" tabIndex={-1} className="mx-auto outline-none grid w-full max-w-5xl grid-cols-[minmax(0,1fr)] content-start gap-6 p-4 md:p-6 print:max-w-none print:p-0">{children}</main>
       </div>
     </div>

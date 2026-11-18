@@ -137,3 +137,26 @@ export async function changeOwnPassword(
   db.update(users).set({ passwordHash }).where(eq(users.id, actor.id)).run();
   deleteUserSessions(db, actor.id);
 }
+
+/**
+ * Permanently deletes a user, for accounts added by mistake (QA Ö8). Nothing else
+ * belongs to a user: sessions and company assignments go with it, and imports
+ * they ran stay without a name. Nobody deletes themselves or the last active admin.
+ */
+export function deleteUser(db: Db, actor: Actor, userId: number): void {
+  assertAdmin(actor);
+  if (userId === actor.id) throw new AppError("cannotDeleteSelf");
+  db.transaction((tx) => {
+    const user = tx.select().from(users).where(eq(users.id, userId)).get();
+    if (!user) throw new AppError("notFound");
+    if (user.role === "admin" && user.active) {
+      const others = tx
+        .select({ n: sql<number>`count(*)` })
+        .from(users)
+        .where(and(eq(users.role, "admin"), eq(users.active, true), ne(users.id, userId)))
+        .get();
+      if ((others?.n ?? 0) === 0) throw new AppError("lastAdmin");
+    }
+    tx.delete(users).where(eq(users.id, userId)).run();
+  });
+}
