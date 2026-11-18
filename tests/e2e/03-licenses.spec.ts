@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, choose, optionsOf, signIn, signOut, switchCompany, TECH } from "./helpers";
+import { ADMIN, optionsOf, pickDevice, signIn, signOut, switchCompany, TECH } from "./helpers";
 
 // Builds on 02: Akdeniz Lojistik has "Muhasebe PC" (D-0001); Boğaziçi Tekstil has "Gizli Sunucu".
 test.describe.configure({ mode: "serial" });
@@ -65,13 +65,16 @@ test("a license is assigned to a device until its seats run out", async ({ page 
   await expect(page.getByRole("heading", { name: "Satış Dizüstü" })).toBeVisible();
 
   await openLicense(page, "Microsoft 365");
-  await choose(page, "Cihaza ata", "Muhasebe PC (D-0001)");
+  // Nothing is chosen at first, so "Assign" waits for a choice (QA D5).
+  await expect(page.getByRole("button", { name: "Ata", exact: true })).toBeDisabled();
+  await pickDevice(page, "Cihaza ata", "Muhasebe PC (D-0001)");
   await page.getByRole("button", { name: "Ata", exact: true }).click();
   await expect(page.getByText("1 / 1")).toBeVisible();
   await expect(page.getByRole("link", { name: /Muhasebe PC/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Ata", exact: true }).click();
-  await expect(page.getByText("Bu lisansta boş koltuk yok.")).toBeVisible();
+  // A full license says so instead of offering a list that fails on submit (QA D4).
+  await expect(page.getByText(/^Boş koltuk yok\./)).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Cihaza ata" })).toHaveCount(0);
 
   await page.getByRole("link", { name: /Muhasebe PC/ }).click();
   await expect(page.getByRole("heading", { name: "Muhasebe PC" })).toBeVisible();
@@ -95,6 +98,7 @@ test("editing without retyping the key keeps it; seats cannot drop below usage",
   await page.getByRole("button", { name: "Anahtarı göster" }).click();
   await expect(page.getByTestId("license-key")).toHaveText(KEY);
 
+  await pickDevice(page, "Cihaza ata", "Satış Dizüstü (D-0003)");
   await page.getByRole("button", { name: "Ata", exact: true }).click();
   await expect(page.getByText("2 cihaz")).toBeVisible();
 

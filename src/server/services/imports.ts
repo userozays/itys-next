@@ -6,6 +6,7 @@ import { AppError } from "../errors";
 import { fold, guessMapping, sanitizeMapping, type Mapping } from "../import/mapping";
 import { normalizeRow, type NormalizedRow, type RowIssue } from "../import/normalize";
 import type { ParsedSheet } from "../import/parse";
+import { normalizeMac } from "../validation";
 import { createAsset, meaningfulSerial, tagAllocator } from "./assets";
 import { getCompany } from "./companies";
 import { createLocation } from "./locations";
@@ -104,23 +105,28 @@ function preview(db: DbOrTx, job: ImportJob): ImportPreview {
   job.rows.forEach((cells, index) => {
     const row = index + 2; // 1-based, after the header row: matches the spreadsheet.
     const result = normalizeRow(cells, job.mapping);
-    if (!result.ok) return void skipped.push({ row, issues: result.issues });
 
-    const { tag, serial, macAddress } = result.value.input;
-    const keys = {
-      tag: tag?.toUpperCase(),
-      serial: serial && meaningfulSerial(serial) ? serial.toUpperCase() : undefined,
-      macAddress: macAddress?.toUpperCase(),
+    // Duplicates are checked on rows with other problems too, so a row lists everything
+    // wrong with it at once (QA D11). Read from the cells, as a failed row has no value.
+    const cell = (field: "tag" | "serial" | "macAddress") => {
+      const index = job.mapping[field];
+      return index === undefined ? "" : (cells[index] ?? "").trim();
     };
-    const issues: RowIssue[] = [];
+    const serial = cell("serial");
+    const keys = {
+      tag: cell("tag").toUpperCase() || undefined,
+      serial: serial && meaningfulSerial(serial) ? serial.toUpperCase() : undefined,
+      macAddress: normalizeMac(cell("macAddress")) ?? undefined,
+    };
+    const issues: RowIssue[] = result.ok ? [] : [...result.issues];
     for (const field of ["tag", "serial", "macAddress"] as const) {
       const key = keys[field];
-      if (!key) continue;
+      if (!key || issues.some((i) => i.field === field)) continue;
       const prefix = field === "macAddress" ? "mac" : field;
       if (taken[field].has(key)) issues.push({ field, code: `${prefix}Taken` });
       else if (seen[field].has(key)) issues.push({ field, code: `${prefix}Duplicate` });
     }
-    if (issues.length > 0) return void skipped.push({ row, issues });
+    if (!result.ok || issues.length > 0) return void skipped.push({ row, issues });
     for (const field of ["tag", "serial", "macAddress"] as const) if (keys[field]) seen[field].add(keys[field]!);
 
     const location = result.value.locationName;

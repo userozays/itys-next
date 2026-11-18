@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { FormError, useFormAction } from "@/components/form";
 import { useSafeCall } from "@/components/safe-call";
-import { SelectBox } from "@/components/select-box";
+import { AssetPicker, type PickerGroup } from "@/components/asset-picker";
 import { Button } from "@/components/ui/button";
 import { assignLicenseAction, revealLicenseKeyAction, unassignLicenseAction } from "../actions";
 
@@ -74,24 +74,38 @@ export function KeyReveal({ licenseId }: { licenseId: number }) {
   );
 }
 
-export function AssignForm({ licenseId, options }: { licenseId: number; options: { id: number; label: string }[] }) {
+export function AssignForm({
+  licenseId,
+  groups,
+  seatsFull,
+}: {
+  licenseId: number;
+  groups: PickerGroup[];
+  seatsFull: boolean;
+}) {
   const t = useTranslations("licenses");
   const { state, pending, onSubmit } = useFormAction(assignLicenseAction.bind(null, licenseId));
+  const [chosen, setChosen] = useState<string | null>(null);
 
-  if (options.length === 0) return <p className="text-sm text-muted-foreground">{t("noFreeDevices")}</p>;
+  if (seatsFull) return <p className="text-sm text-muted-foreground">{t("seatsFull")}</p>;
+  if (groups.every((g) => g.items.length === 0)) return <p className="text-sm text-muted-foreground">{t("noFreeDevices")}</p>;
 
   return (
     <form method="post" onSubmit={onSubmit} className="grid gap-2">
       <FormError state={state} />
       <div className="flex gap-2">
-        <SelectBox
-          key={options.map((o) => o.id).join(",")}
+        <AssetPicker
+          // A fresh, empty picker after every assignment.
+          key={groups.flatMap((g) => g.items.map((i) => i.value)).join(",")}
           name="assetId"
+          groups={groups}
           ariaLabel={t("assignTo")}
-          options={options.map((o) => ({ value: String(o.id), label: o.label }))}
+          placeholder={t("chooseDevice")}
+          emptyText={t("noMatch")}
+          onValueChange={setChosen}
           className="flex-1"
         />
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || !chosen}>
           {t("assign")}
         </Button>
       </div>

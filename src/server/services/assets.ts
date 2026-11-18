@@ -3,7 +3,7 @@ import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/da
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
-import { assets, companies, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
+import { assets, assetStatuses, assetTypes, companies, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
 import { AppError, FieldErrors, type FieldIssue } from "../errors";
 import { normalizeMac, type AssetInput } from "../validation";
 import { searchFold } from "../../lib/turkish";
@@ -36,15 +36,23 @@ export type AssetSummary = { total: number; byType: Record<string, number>; bySt
 const isUniqueViolation = (e: unknown) => e instanceof Error && /UNIQUE/.test(e.message);
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
+/** Sorts an enum column in the order of its values instead of alphabetically by key. */
+const enumOrder = (column: AnySQLiteColumn, values: readonly string[]) =>
+  sql`case ${column} ${sql.join(values.map((v, i) => sql`when ${v} then ${i}`), sql` `)} else ${values.length} end`;
+
 // Text columns sort by a Turkish key (src/lib/turkish.ts); SQLite alone would put Ç, İ, Ö, Ş, Ü after Z.
+// Type and status follow the order of the lists in the schema (in use → in stock → in repair → retired).
 const sortColumns = {
   tag: trKey(assets.tag),
   name: trKey(assets.name),
-  type: assets.type,
-  status: assets.status,
+  type: enumOrder(assets.type, assetTypes),
+  status: enumOrder(assets.status, assetStatuses),
   warrantyEnd: assets.warrantyEnd,
   updatedAt: assets.updatedAt,
 } as const;
+
+/** Columns that can be empty; empty values go last in both directions. */
+const nullableSort = new Set<AssetSortKey>(["warrantyEnd"]);
 
 const listColumns = {
   id: assets.id,
@@ -115,15 +123,17 @@ export function listAssets(
   const total = db.select({ n: sql<number>`count(*)` }).from(assets).where(where).get()?.n ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(Math.max(1, Math.trunc(filter.page ?? 1) || 1), pageCount);
-  const column = sortColumns[filter.sort ?? "name"];
-  const order = filter.dir === "desc" ? desc(column) : asc(column);
+  const sortKey = filter.sort ?? "name";
+  const column = sortColumns[sortKey];
+  const order = [filter.dir === "desc" ? desc(column) : asc(column)];
+  if (nullableSort.has(sortKey)) order.unshift(sql`${column} is null`);
 
   const rows = db
     .select(listColumns)
     .from(assets)
     .leftJoin(locations, eq(locations.id, assets.locationId))
     .where(where)
-    .orderBy(order, asc(assets.id))
+    .orderBy(...order, asc(assets.id))
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE)
     .all();
@@ -328,12 +338,13 @@ export function assetSummary(db: Db, actor: Actor, companyId: number): AssetSumm
 }
 
 /** Every device of a company, for pickers (id, tag and name only). */
-export function listAssetOptions(db: Db, actor: Actor, companyId: number): { id: number; tag: string; name: string }[] {
+/** Devices a license can be assigned to: everything in the company except retired ones. */
+export function listAssetOptions(db: Db, actor: Actor, companyId: number): { id: number; tag: string; name: string; type: AssetType }[] {
   getCompany(db, actor, companyId);
   return db
-    .select({ id: assets.id, tag: assets.tag, name: assets.name })
+    .select({ id: assets.id, tag: assets.tag, name: assets.name, type: assets.type })
     .from(assets)
-    .where(eq(assets.companyId, companyId))
+    .where(and(eq(assets.companyId, companyId), ne(assets.status, "retired")))
     .orderBy(trKey(assets.name), asc(assets.id))
     .all();
 }

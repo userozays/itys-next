@@ -34,6 +34,14 @@ export function PasswordForm() {
         autoComplete="new-password"
         required
       />
+      <Field
+        name="newPasswordRepeat"
+        label={t("account.newPasswordRepeat")}
+        state={state}
+        type="password"
+        autoComplete="new-password"
+        required
+      />
       <Button type="submit" disabled={pending} className="justify-self-start">
         {pending ? t("common.saving") : t("account.change")}
       </Button>

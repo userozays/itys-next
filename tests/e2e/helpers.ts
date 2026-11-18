@@ -2,7 +2,8 @@ import { expect, type Page } from "@playwright/test";
 
 // Spec files run in name order against one database that starts empty:
 // 01 creates these accounts and the two companies, later files build on them.
-export const ADMIN = { username: "admin", password: "admin-password-1" };
+// The admin password must not contain the username (QA D9).
+export const ADMIN = { username: "admin", password: "yonetim-kalesi-2026" };
 export const TECH = { username: "tech.ayse", password: "tech-password-1" };
 
 export async function signIn(page: Page, user: { username: string; password: string }) {
@@ -42,4 +43,12 @@ export async function optionsOf(page: Page, label: string): Promise<string[]> {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("option")).toHaveCount(0);
   return texts;
+}
+
+/** Picks a device in the searchable device list (license assignment), typing part of its name first. */
+export async function pickDevice(page: Page, label: string, option: string) {
+  const input = page.getByRole("combobox", { name: label, exact: true });
+  await input.fill(option.slice(0, 5));
+  await page.getByRole("option", { name: option, exact: true }).click();
+  await expect(input).toHaveValue(option);
 }

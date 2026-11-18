@@ -53,7 +53,7 @@
     "setupTitle": "First-time setup",
     "setupDescription": "Create the first administrator account to start using the system.",
     "name": "Full name",
-    "passwordHint": "At least 10 characters.",
+    "passwordHint": "At least 10 characters; repeated, sequential or common passwords are not accepted.",
     "usernameHint": "3–32 characters: lowercase letters, digits, dot, dash, underscore.",
     "createAdmin": "Create administrator account"
   },
@@ -112,7 +112,8 @@
     "resetPassword": "Reset password",
     "resetPasswordFor": "New password for {username}",
     "resetPasswordHint": "The user's open sessions are ended.",
-    "newPassword": "New password"
+    "newPassword": "New password",
+    "inactiveSuffix": "(inactive)"
   },
   "account": {
     "title": "My account",
@@ -121,7 +122,8 @@
     "currentPassword": "Current password",
     "newPassword": "New password",
     "change": "Change password",
-    "changed": "Your password was changed."
+    "changed": "Your password was changed.",
+    "newPasswordRepeat": "New password (again)"
   },
   "errors": {
     "forbidden": "You are not allowed to do this.",
@@ -151,7 +153,10 @@
     "unexpected": "No answer from the server. Check your connection; the action may still have completed, so reload the page to see.",
     "tagUsedBy": "This tag is already used by {name}.",
     "serialUsedBy": "This serial number is recorded on {tag} ({name}).",
-    "macUsedBy": "This MAC address is recorded on {tag} ({name})."
+    "macUsedBy": "This MAC address is recorded on {tag} ({name}).",
+    "retiredAsset": "Licenses cannot be assigned to a retired device.",
+    "chooseAsset": "Choose a device first.",
+    "inactiveCompany": "An inactive company cannot be assigned to a technician."
   },
   "validation": {
     "required": "This field is required.",
@@ -171,7 +176,12 @@
     "ram": "Enter a whole number of GB (e.g. 16).",
     "ip": "Enter a valid IP address (e.g. 192.168.1.20).",
     "mac": "Enter a valid MAC address (e.g. 00:1A:2B:3C:4D:5E).",
-    "warrantyBeforePurchase": "The warranty cannot end before the purchase date."
+    "warrantyBeforePurchase": "The warranty cannot end before the purchase date.",
+    "passwordWeak": "This password is too easy to guess (repeated or sequential characters, a common password). Choose another one.",
+    "passwordHasUsername": "The password must not contain the username.",
+    "passwordMismatch": "The two passwords do not match.",
+    "technicianCompany": "Assign at least one company to a technician.",
+    "phone": "A phone number may only contain digits, spaces and + ( ) - . /"
   },
   "noCompany": {
     "title": "No current company",
@@ -332,7 +342,12 @@
       "all": "All",
       "soon": "Expiring (30 days)",
       "expired": "Expired"
-    }
+    },
+    "seatsFull": "No free seats. Remove a device or raise the seat count to assign another.",
+    "chooseDevice": "Search or choose a device…",
+    "noMatch": "No matching device.",
+    "groupComputers": "Computers and servers",
+    "groupOther": "Other devices"
   },
   "import": {
     "title": "Import devices",
@@ -384,7 +399,8 @@
       "serialDuplicate": "this serial number appears earlier in the file",
       "macTaken": "this MAC address is recorded on another device of the company",
       "macDuplicate": "this MAC address appears earlier in the file"
-    }
+    },
+    "skippedDoneTitle": "Skipped rows"
   },
   "labels": {
     "title": "Labels",
@@ -467,5 +483,15 @@
   "otherCompany": {
     "notice": "This record belongs to {company}. You are working in {active}; going back to the list and new records go there.",
     "switch": "Switch to {company}"
+  },
+  "pages": {
+    "notFoundTitle": "Page not found",
+    "notFoundText": "The page or record you are looking for does not exist, may have been deleted, or the address is wrong.",
+    "errorTitle": "Something went wrong",
+    "errorText": "An unexpected error occurred while loading the page. You can try again or go back to the dashboard.",
+    "errorCode": "Error code: {code}",
+    "retry": "Try again",
+    "home": "Back to dashboard",
+    "skipToContent": "Skip to content"
   }
 }

@@ -80,7 +80,9 @@ const controlClass =
 function FieldShell({ name, label, error, children }: { name: string; label: string; error?: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={name}>{label}</Label>
+      <Label id={`${name}-label`} htmlFor={name}>
+        {label}
+      </Label>
       {children}
       {error ? (
         <p id={`${name}-error`} className="text-xs text-destructive">
@@ -106,6 +108,7 @@ export function SelectField({ name, label, state, options, defaultValue, onValue
     <FieldShell name={name} label={label} error={error}>
       <SelectBox
         id={name}
+        labelId={`${name}-label`}
         name={name}
         options={options}
         defaultValue={defaultValue}

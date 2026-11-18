@@ -57,7 +57,7 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span className="font-mono text-xs">{asset.tag}</span>
             <StatusBadge status={asset.status} />
-            <WarrantyBadge end={asset.warrantyEnd} today={todayIso()} />
+            <WarrantyBadge end={asset.warrantyEnd} today={todayIso()} status={asset.status} />
           </div>
         </div>
         <div className="flex gap-2">

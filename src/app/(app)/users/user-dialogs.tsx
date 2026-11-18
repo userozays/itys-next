@@ -17,7 +17,7 @@ import type { Role } from "@/server/db/schema";
 import { resetPasswordAction, saveUserAction } from "./actions";
 
 export type UserRow = { id: number; username: string; name: string; role: Role; active: boolean; companyIds: number[] };
-type CompanyOption = { id: number; name: string };
+type CompanyOption = { id: number; name: string; active: boolean };
 
 function Footer({ pending, onCancel }: { pending: boolean; onCancel: () => void }) {
   const t = useTranslations("common");
@@ -46,6 +46,9 @@ export function UserDialog({
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role>(user?.role ?? "technician");
   const { state, pending, onSubmit } = useFormAction(saveUserAction, () => setOpen(false));
+  // Inactive companies cannot be newly assigned; ones the user already has stay visible so they are kept.
+  const choices = companies.filter((c) => c.active || user?.companyIds.includes(c.id));
+  const companyError = state.fieldErrors?.companyIds;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -92,13 +95,15 @@ export function UserDialog({
             ]}
           />
           {role === "technician" ? (
-            <fieldset className="grid gap-2">
+            <fieldset className="grid gap-2" aria-describedby={companyError ? "companyIds-error" : undefined}>
               <legend className="mb-1.5 text-sm font-medium">{t("users.companies")}</legend>
-              {companies.length === 0 ? (
+              {choices.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{t("users.noCompaniesToAssign")}</p>
               ) : (
-                <div className="grid max-h-40 gap-2 overflow-y-auto rounded-lg border p-2.5">
-                  {companies.map((c) => (
+                <div
+                  className={`grid max-h-40 gap-2 overflow-y-auto rounded-lg border p-2.5 ${companyError ? "border-destructive" : ""}`}
+                >
+                  {choices.map((c) => (
                     <label key={c.id} className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -108,10 +113,16 @@ export function UserDialog({
                         className="size-4 accent-primary"
                       />
                       {c.name}
+                      {c.active ? null : <span className="text-muted-foreground">{t("users.inactiveSuffix")}</span>}
                     </label>
                   ))}
                 </div>
               )}
+              {companyError ? (
+                <p id="companyIds-error" className="text-xs text-destructive">
+                  {companyError}
+                </p>
+              ) : null}
             </fieldset>
           ) : null}
           {user ? <CheckField name="active" label={t("users.active")} defaultChecked={user.active} /> : null}

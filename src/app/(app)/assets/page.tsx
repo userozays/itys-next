@@ -209,7 +209,7 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
                     <TableCell>
                       <span className="flex flex-wrap items-center gap-1.5 tabular-nums">
                         {formatDate(a.warrantyEnd, locale)}
-                        <WarrantyBadge end={a.warrantyEnd} today={today} />
+                        <WarrantyBadge end={a.warrantyEnd} today={today} status={a.status} />
                       </span>
                     </TableCell>
                   </TableRow>

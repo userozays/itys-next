@@ -53,7 +53,7 @@
     "setupTitle": "İlk kurulum",
     "setupDescription": "Sistemi kullanmaya başlamak için ilk yönetici hesabını oluştur.",
     "name": "Ad soyad",
-    "passwordHint": "En az 10 karakter.",
+    "passwordHint": "En az 10 karakter; tekrar eden, sıralı ya da yaygın parolalar kabul edilmez.",
     "usernameHint": "3–32 karakter: küçük harf, rakam, nokta, tire, alt çizgi.",
     "createAdmin": "Yönetici hesabını oluştur"
   },
@@ -112,7 +112,8 @@
     "resetPassword": "Parolayı sıfırla",
     "resetPasswordFor": "{username} için yeni parola",
     "resetPasswordHint": "Kullanıcının açık oturumları kapatılır.",
-    "newPassword": "Yeni parola"
+    "newPassword": "Yeni parola",
+    "inactiveSuffix": "(pasif)"
   },
   "account": {
     "title": "Hesabım",
@@ -121,7 +122,8 @@
     "currentPassword": "Mevcut parola",
     "newPassword": "Yeni parola",
     "change": "Parolayı değiştir",
-    "changed": "Parolan değiştirildi."
+    "changed": "Parolan değiştirildi.",
+    "newPasswordRepeat": "Yeni parola (tekrar)"
   },
   "errors": {
     "forbidden": "Bu işlem için yetkin yok.",
@@ -151,7 +153,10 @@
     "unexpected": "Sunucudan yanıt alınamadı. Bağlantını kontrol et; işlem yine de tamamlanmış olabilir, sayfayı yenileyip bak.",
     "tagUsedBy": "Bu etiket no zaten {name} cihazında kullanılıyor.",
     "serialUsedBy": "Bu seri no {tag} ({name}) cihazında kayıtlı.",
-    "macUsedBy": "Bu MAC adresi {tag} ({name}) cihazında kayıtlı."
+    "macUsedBy": "Bu MAC adresi {tag} ({name}) cihazında kayıtlı.",
+    "retiredAsset": "Hurda durumdaki cihaza lisans atanamaz.",
+    "chooseAsset": "Önce bir cihaz seç.",
+    "inactiveCompany": "Pasif şirket teknisyene atanamaz."
   },
   "validation": {
     "required": "Bu alan zorunlu.",
@@ -171,7 +176,12 @@
     "ram": "GB cinsinden tam sayı gir (ör. 16).",
     "ip": "Geçerli bir IP adresi gir (ör. 192.168.1.20).",
     "mac": "Geçerli bir MAC adresi gir (ör. 00:1A:2B:3C:4D:5E).",
-    "warrantyBeforePurchase": "Garanti bitişi alım tarihinden önce olamaz."
+    "warrantyBeforePurchase": "Garanti bitişi alım tarihinden önce olamaz.",
+    "passwordWeak": "Bu parola çok kolay tahmin edilir (tekrar eden ya da sıralı karakterler, yaygın parola). Başka bir parola seç.",
+    "passwordHasUsername": "Parola kullanıcı adını içermemeli.",
+    "passwordMismatch": "İki parola aynı değil.",
+    "technicianCompany": "Teknisyene en az bir şirket ata.",
+    "phone": "Telefon yalnızca rakam, boşluk ve + ( ) - . / içerebilir."
   },
   "noCompany": {
     "title": "Çalışılan şirket yok",
@@ -332,7 +342,12 @@
       "all": "Tüm süreler",
       "soon": "Süresi doluyor (30 gün)",
       "expired": "Süresi doldu"
-    }
+    },
+    "seatsFull": "Boş koltuk yok. Yeni atama için bir cihazdan kaldır ya da koltuk sayısını artır.",
+    "chooseDevice": "Cihaz ara ya da seç…",
+    "noMatch": "Eşleşen cihaz yok.",
+    "groupComputers": "Bilgisayar ve sunucular",
+    "groupOther": "Diğer cihazlar"
   },
   "import": {
     "title": "Cihazları içe aktar",
@@ -384,7 +399,8 @@
       "serialDuplicate": "bu seri no dosyada daha önce geçiyor",
       "macTaken": "bu MAC adresi şirkette başka cihazda kayıtlı",
       "macDuplicate": "bu MAC adresi dosyada daha önce geçiyor"
-    }
+    },
+    "skippedDoneTitle": "Atlanan satırlar"
   },
   "labels": {
     "title": "Etiketler",
@@ -467,5 +483,15 @@
   "otherCompany": {
     "notice": "Bu kayıt {company} şirketine ait. Şu an {active} şirketinde çalışıyorsun; listeye dönüş ve yeni kayıtlar o şirkete gider.",
     "switch": "{company} şirketine geç"
+  },
+  "pages": {
+    "notFoundTitle": "Sayfa bulunamadı",
+    "notFoundText": "Aradığın sayfa ya da kayıt yok, silinmiş olabilir ya da adres yanlış yazılmış.",
+    "errorTitle": "Bir şeyler ters gitti",
+    "errorText": "Sayfa yüklenirken beklenmeyen bir hata oldu. Tekrar deneyebilir ya da panoya dönebilirsin.",
+    "errorCode": "Hata kodu: {code}",
+    "retry": "Tekrar dene",
+    "home": "Panoya dön",
+    "skipToContent": "İçeriğe atla"
   }
 }

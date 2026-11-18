@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isWeakPassword } from "../lib/password-strength";
+import { searchFold } from "../lib/turkish";
 import { assetStatuses, assetTypes, currencies, roles } from "./db/schema";
 
 // Messages are translation keys under "validation.*".
@@ -7,7 +9,11 @@ export const username = z
   .trim()
   .toLowerCase()
   .regex(/^[a-z0-9._-]{3,32}$/, "username");
-export const password = z.string().min(10, "passwordMin").max(200, "passwordMax");
+export const password = z
+  .string()
+  .min(10, "passwordMin")
+  .max(200, "passwordMax")
+  .refine((v) => v.length < 10 || !isWeakPassword(v), "passwordWeak");
 export const personName = z.string().trim().min(1, "required").max(80, "tooLong");
 
 const optionalText = (max: number) =>
@@ -19,27 +25,44 @@ const optionalText = (max: number) =>
     .nullable()
     .optional();
 
-export const firstAdminInput = z.object({ username, name: personName, password });
+const companyIds = z.array(z.number().int().positive()).default([]);
 
-export const newUserInput = z.object({
-  username,
-  name: personName,
-  password,
-  role: z.enum(roles),
-  companyIds: z.array(z.number().int().positive()).default([]),
-});
+/**
+ * For object refinements: run even when other fields have problems (so the form
+ * shows every error at once, QA O7), as long as the fields the check reads are there.
+ */
+const hasFields =
+  (...names: string[]) =>
+  ({ value }: { value: unknown }) =>
+    typeof value === "object" && value !== null && names.every((n) => (value as Record<string, unknown>)[n] !== undefined);
 
-export const userUpdateInput = z.object({
-  name: personName,
-  role: z.enum(roles),
-  active: z.boolean(),
-  companyIds: z.array(z.number().int().positive()).default([]),
-});
+/** The password must not contain the username ("ayse.k" → "ayse.k2026!"). */
+const passwordWithoutUsername = <T extends { username: string; password: string }>(v: T) =>
+  !searchFold(v.password).includes(searchFold(v.username));
+const passwordRule = { message: "passwordHasUsername", path: ["password"], when: hasFields("username", "password") };
+
+/** A technician without companies sees nothing, so at least one is required (QA D8). */
+const technicianHasCompany = (v: { role: string; companyIds: number[] }) => v.role !== "technician" || v.companyIds.length > 0;
+const companyRule = { message: "technicianCompany", path: ["companyIds"], when: hasFields("role", "companyIds") };
+
+export const firstAdminInput = z
+  .object({ username, name: personName, password })
+  .refine(passwordWithoutUsername, passwordRule);
+
+export const newUserInput = z
+  .object({ username, name: personName, password, role: z.enum(roles), companyIds })
+  .refine(passwordWithoutUsername, passwordRule)
+  .refine(technicianHasCompany, companyRule);
+
+export const userUpdateInput = z
+  .object({ name: personName, role: z.enum(roles), active: z.boolean(), companyIds })
+  .refine(technicianHasCompany, companyRule);
 
 export const companyInput = z.object({
   name: z.string().trim().min(1, "required").max(120, "tooLong"),
   contact: optionalText(120),
-  phone: optionalText(40),
+  // Digits with the usual separators: "+90 (212) 555 12 34", "0212-555-1234 / 102".
+  phone: optionalText(40).refine((v) => v == null || (/^[0-9+()./\s-]+$/.test(v) && (v.match(/\d/g)?.length ?? 0) >= 3), "phone"),
   notes: optionalText(2000),
   active: z.boolean().default(true),
 });

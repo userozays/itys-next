@@ -73,7 +73,7 @@ export default async function ImportJobPage({ params }: PageProps<"/assets/impor
         {job.report.length > 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>{t("import.skippedTitle")}</CardTitle>
+              <CardTitle>{t("import.skippedDoneTitle")}</CardTitle>
             </CardHeader>
             <CardContent>{skippedList(job.report)}</CardContent>
           </Card>

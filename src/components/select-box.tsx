@@ -27,6 +27,7 @@ export function SelectBox({
   options,
   defaultValue,
   ariaLabel,
+  labelId,
   invalid,
   className,
   onValueChange,
@@ -36,6 +37,8 @@ export function SelectBox({
   options: SelectOption[];
   defaultValue?: string | number | null;
   ariaLabel?: string;
+  /** id of the visible label; screen readers then announce "Type" rather than the chosen value (QA D12). */
+  labelId?: string;
   invalid?: boolean;
   className?: string;
   onValueChange?: (value: string) => void;
@@ -60,7 +63,11 @@ export function SelectBox({
           filter?.applyWith(name, next);
         }}
       >
-        <SelectTrigger id={id} aria-label={ariaLabel} aria-invalid={invalid || undefined} className={cn("min-w-0", className)}>
+        <SelectTrigger
+          id={id}
+          aria-label={labelId ? undefined : ariaLabel}
+          aria-labelledby={labelId}
+          aria-invalid={invalid || undefined} className={cn("min-w-0", className)}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false} align="start">

@@ -19,6 +19,8 @@ import { deleteLicenseAction } from "../actions";
 import { AssignForm, KeyReveal, UnassignButton } from "./license-widgets";
 import { loadLicense } from "./load";
 
+const COMPUTER_TYPES = new Set(["computer", "laptop", "server"]);
+
 export async function generateMetadata({ params }: PageProps<"/licenses/[id]">): Promise<Metadata> {
   return { title: loadLicense(await requireActor(), (await params).id).name };
 }
@@ -40,9 +42,15 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
   const db = getDb();
   const assigned = listAssignedAssets(db, actor, license.id);
   const assignedIds = new Set(assigned.map((a) => a.id));
-  const options = listAssetOptions(db, actor, license.companyId)
-    .filter((a) => !assignedIds.has(a.id))
-    .map((a) => ({ id: a.id, label: `${a.name} (${a.tag})` }));
+  const free = listAssetOptions(db, actor, license.companyId).filter((a) => !assignedIds.has(a.id));
+  // Software licenses mostly go on computers, so those come first; the rest stay reachable.
+  const isComputer = (type: string) => COMPUTER_TYPES.has(type);
+  const toItem = (a: (typeof free)[number]) => ({ value: String(a.id), label: `${a.name} (${a.tag})` });
+  const groups = [
+    { value: t("licenses.groupComputers"), items: free.filter((a) => isComputer(a.type)).map(toItem) },
+    { value: t("licenses.groupOther"), items: free.filter((a) => !isComputer(a.type)).map(toItem) },
+  ];
+  const seatsFull = license.seats != null && license.usedSeats >= license.seats;
 
   return (
     <>
@@ -125,7 +133,7 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
                 ))}
               </ul>
             )}
-            <AssignForm licenseId={license.id} options={options} />
+            <AssignForm licenseId={license.id} groups={groups} seatsFull={seatsFull} />
           </CardContent>
         </Card>
       </div>

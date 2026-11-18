@@ -2,7 +2,7 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { deleteUserSessions, type Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
-import { userCompanies, users, type Role } from "../db/schema";
+import { companies, userCompanies, users, type Role } from "../db/schema";
 import { AppError } from "../errors";
 import type { FirstAdminInput, NewUserInput, UserUpdateInput } from "../validation";
 
@@ -22,6 +22,13 @@ function assertAdmin(actor: Actor): void {
 const isUniqueViolation = (e: unknown) => e instanceof Error && /UNIQUE/.test(e.message);
 
 function setCompanies(db: DbOrTx, userId: number, role: Role, companyIds: number[]): void {
+  const current = new Set(
+    db.select({ id: userCompanies.companyId }).from(userCompanies).where(eq(userCompanies.userId, userId)).all().map((r) => r.id),
+  );
+  const active = new Set(db.select({ id: companies.id }).from(companies).where(eq(companies.active, true)).all().map((r) => r.id));
+  // New assignments only to active companies (QA D8); an existing one stays when its company is deactivated.
+  if (role === "technician" && companyIds.some((id) => !active.has(id) && !current.has(id))) throw new AppError("inactiveCompany");
+
   db.delete(userCompanies).where(eq(userCompanies.userId, userId)).run();
   // Admins see every company, so assignments are only kept for technicians.
   const unique = role === "technician" ? [...new Set(companyIds)] : [];

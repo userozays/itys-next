@@ -19,7 +19,7 @@ export default async function UsersPage() {
   const t = await getTranslations();
   const db = getDb();
   const users = listUsers(db, actor);
-  const companies = listCompanies(db, actor).map((c) => ({ id: c.id, name: c.name }));
+  const companies = listCompanies(db, actor).map((c) => ({ id: c.id, name: c.name, active: c.active }));
   const companyName = new Map(companies.map((c) => [c.id, c.name]));
 
   return (

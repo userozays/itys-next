@@ -52,9 +52,12 @@ export function MappingForm({ jobId, fields, headers }: { jobId: number; fields:
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((f) => (
           <div key={f.field} className="grid gap-1.5">
-            <Label htmlFor={`map-${f.field}`}>{f.label}</Label>
+            <Label id={`map-${f.field}-label`} htmlFor={`map-${f.field}`}>
+              {f.label}
+            </Label>
             <SelectBox
               id={`map-${f.field}`}
+              labelId={`map-${f.field}-label`}
               name={f.field}
               defaultValue={f.column ?? ""}
               options={[{ value: "", label: t("notMapped") }, ...headers.map((h, i) => ({ value: String(i), label: h }))]}

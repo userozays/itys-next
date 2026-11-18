@@ -164,8 +164,14 @@ export function listLicensesForAsset(db: Db, actor: Actor, assetId: number): Lic
 export function assignLicense(db: Db, actor: Actor, licenseId: number, assetId: number): void {
   db.transaction((tx) => {
     const license = getLicense(tx, actor, licenseId);
-    const asset = tx.select({ id: assets.id, companyId: assets.companyId }).from(assets).where(eq(assets.id, assetId)).get();
+    if (!assetId) throw new AppError("chooseAsset");
+    const asset = tx
+      .select({ id: assets.id, companyId: assets.companyId, status: assets.status })
+      .from(assets)
+      .where(eq(assets.id, assetId))
+      .get();
     if (!asset || asset.companyId !== license.companyId) throw new AppError("invalidAsset");
+    if (asset.status === "retired") throw new AppError("retiredAsset");
 
     const existing = tx
       .select({ assetId: licenseAssignments.assetId })

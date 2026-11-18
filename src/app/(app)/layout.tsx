@@ -18,6 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-dvh flex-1">
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-lg bg-background px-3 py-2 text-sm font-medium shadow-md ring-1 ring-ring focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >
+        {t("pages.skipToContent")}
+      </a>
       <aside className="hidden w-56 print:!hidden shrink-0 flex-col gap-4 border-r bg-muted/30 p-3 md:flex">
         <Link href="/" className="px-3 pt-1 font-heading text-base font-semibold tracking-tight">
           {t("app.name")}
@@ -38,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="border-b px-4 py-1.5 md:hidden print:hidden">
           <NavLinks isAdmin={isAdmin} orientation="horizontal" />
         </div>
-        <main className="mx-auto grid w-full max-w-5xl grid-cols-[minmax(0,1fr)] content-start gap-6 p-4 md:p-6 print:max-w-none print:p-0">{children}</main>
+        <main id="main" tabIndex={-1} className="mx-auto outline-none grid w-full max-w-5xl grid-cols-[minmax(0,1fr)] content-start gap-6 p-4 md:p-6 print:max-w-none print:p-0">{children}</main>
       </div>
     </div>
   );

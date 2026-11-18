@@ -10,8 +10,10 @@ export function StatusBadge({ status }: { status: AssetStatus }) {
   return <Badge variant={statusVariant[status]}>{t(status)}</Badge>;
 }
 
-export function WarrantyBadge({ end, today }: { end: string | null; today: string }) {
+/** Retired devices get no warranty badge, as on the dashboard and in notifications. */
+export function WarrantyBadge({ end, today, status }: { end: string | null; today: string; status: AssetStatus }) {
   const t = useTranslations("assets.warranty");
+  if (status === "retired") return null;
   const state = warrantyState(end, today);
   if (state === "expired") return <Badge variant="destructive">{t("expired")}</Badge>;
   if (state === "soon") return <Badge variant="default">{t("soon")}</Badge>;
