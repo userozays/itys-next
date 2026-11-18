@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
+import { listAssignees } from "@/server/services/assets";
 import { listLocations } from "@/server/services/locations";
 import { AssetForm } from "../asset-form";
 
@@ -17,11 +18,12 @@ export default async function NewAssetPage() {
   if (!company) redirect("/assets");
   const t = await getTranslations("assets");
   const locations = listLocations(getDb(), actor, company.id).map((l) => ({ id: l.id, name: l.name }));
+  const assignees = listAssignees(getDb(), actor, company.id);
 
   return (
     <>
       <PageHeader title={t("new")} description={company.name} />
-      <AssetForm locations={locations} />
+      <AssetForm locations={locations} assignees={assignees} />
     </>
   );
 }

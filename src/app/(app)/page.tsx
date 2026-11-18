@@ -13,12 +13,13 @@ import { assetSummary } from "@/server/services/assets";
 import { listCompanies } from "@/server/services/companies";
 import { listLicenses } from "@/server/services/licenses";
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
   return (
     <Card>
       <CardHeader>
         <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
+        <CardTitle className="text-xl tabular-nums break-words sm:text-2xl">{value}</CardTitle>
+        {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
       </CardHeader>
     </Card>
   );
@@ -65,9 +66,14 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title={t("title")} description={t("welcome", { name: actor.name })} />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Two by two on phones (QA UX note). */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label={t("activeCompany")} value={active?.name ?? "—"} />
-        <Stat label={t("assetCount")} value={summary?.total ?? 0} />
+        <Stat
+          label={t("assetCount")}
+          value={summary?.total ?? 0}
+          note={summary ? t("activeAssets", { count: summary.total - (summary.byStatus.retired ?? 0) }) : undefined}
+        />
         <Stat label={t("licenseCount")} value={active ? listLicenses(db, actor, active.id).length : 0} />
         <Stat label={t("companyCount")} value={companyCount} />
       </div>

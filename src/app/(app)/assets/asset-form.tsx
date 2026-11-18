@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ScanIntoField } from "@/components/barcode-scan";
-import { Field, FormError, SelectField, TextareaField, useFormAction } from "@/components/form";
+import { Field, FormError, SelectField, SuggestField, TextareaField, useFormAction } from "@/components/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetStatuses, assetTypes } from "@/server/db/schema";
@@ -38,12 +38,23 @@ export type AssetFormValues = {
   macAddress: string | null;
 };
 
-export function AssetForm({ asset, locations }: { asset?: AssetFormValues; locations: { id: number; name: string }[] }) {
+export function AssetForm({
+  asset,
+  locations,
+  assignees,
+}: {
+  asset?: AssetFormValues;
+  locations: { id: number; name: string }[];
+  /** Names already used in the company, offered while typing "Assigned to". */
+  assignees: string[];
+}) {
   const t = useTranslations();
   const { state, pending, onSubmit } = useFormAction(saveAssetAction);
   // Specifications found on another device of the same model, and whether they were applied.
   const [suggestion, setSuggestion] = useState<{ specs: ModelSpecs; applied: boolean }>();
   const lastLookup = useRef("");
+  // Printed QR labels carry the tag number, so changing it on a labelled device breaks them (QA UX note).
+  const [tagChanged, setTagChanged] = useState(false);
 
   function applySpecs(specs: ModelSpecs) {
     for (const field of SPEC_FIELDS) {
@@ -79,7 +90,16 @@ export function AssetForm({ asset, locations }: { asset?: AssetFormValues; locat
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field name="name" label={t("assets.name")} state={state} defaultValue={asset?.name} required autoFocus={!asset} />
-          <Field name="tag" label={t("assets.tag")} hint={t("assets.tagHint")} state={state} defaultValue={asset?.tag} autoCapitalize="characters" />
+          <Field
+            name="tag"
+            label={t("assets.tag")}
+            hint={t("assets.tagHint")}
+            warning={tagChanged ? t("assets.tagChangeWarning") : undefined}
+            state={state}
+            defaultValue={asset?.tag}
+            autoCapitalize="characters"
+            onChange={(e) => setTagChanged(Boolean(asset) && e.currentTarget.value.trim().toUpperCase() !== asset!.tag)}
+          />
           <SelectField
             name="type"
             label={t("assets.type")}
@@ -147,7 +167,7 @@ export function AssetForm({ asset, locations }: { asset?: AssetFormValues; locat
             defaultValue={asset?.locationId ?? ""}
             options={[{ value: "", label: t("assets.noLocation") }, ...locations.map((l) => ({ value: String(l.id), label: l.name }))]}
           />
-          <Field name="assignedTo" label={t("assets.assignedTo")} state={state} defaultValue={asset?.assignedTo ?? ""} />
+          <SuggestField name="assignedTo" label={t("assets.assignedTo")} state={state} suggestions={assignees} defaultValue={asset?.assignedTo ?? ""} />
         </CardContent>
       </Card>
 

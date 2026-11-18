@@ -6,6 +6,7 @@ import { useSafeCall } from "@/components/safe-call";
 import { SelectBox, type SelectOption } from "@/components/select-box";
 import { Label } from "@/components/ui/label";
 import type { FormState } from "@/lib/form-state";
+import { TextSuggest } from "@/components/text-suggest";
 
 /** Submits a form to a server action without resetting the fields on error. */
 export function useFormAction(action: (form: FormData) => Promise<FormState>, onSuccess?: () => void) {
@@ -42,12 +43,14 @@ type FieldProps = ComponentProps<typeof Input> & {
   name: string;
   label: string;
   hint?: ReactNode;
+  /** Shown instead of the hint, highlighted, when a value needs attention. */
+  warning?: ReactNode;
   state: FormState;
 };
 
-export function Field({ name, label, hint, state, ...props }: FieldProps) {
+export function Field({ name, label, hint, warning, state, ...props }: FieldProps) {
   const error = state.fieldErrors?.[name];
-  const describedBy = error ? `${name}-error` : hint ? `${name}-hint` : undefined;
+  const describedBy = error ? `${name}-error` : warning ? `${name}-warning` : hint ? `${name}-hint` : undefined;
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={name}>{label}</Label>
@@ -55,6 +58,10 @@ export function Field({ name, label, hint, state, ...props }: FieldProps) {
       {error ? (
         <p id={`${name}-error`} className="text-xs text-destructive">
           {error}
+        </p>
+      ) : warning ? (
+        <p id={`${name}-warning`} role="status" className="text-xs font-medium text-amber-700 dark:text-amber-400">
+          {warning}
         </p>
       ) : hint ? (
         <p id={`${name}-hint`} className="text-xs text-muted-foreground">
@@ -115,6 +122,35 @@ export function SelectField({ name, label, state, options, defaultValue, onValue
         invalid={Boolean(error)}
         onValueChange={onValueChange}
         className="w-full"
+      />
+    </FieldShell>
+  );
+}
+
+/** A text field with suggestions from earlier values (`TextSuggest`). */
+export function SuggestField({
+  name,
+  label,
+  state,
+  suggestions,
+  defaultValue,
+}: {
+  name: string;
+  label: string;
+  state: FormState;
+  suggestions: string[];
+  defaultValue?: string;
+}) {
+  const error = state.fieldErrors?.[name];
+  return (
+    <FieldShell name={name} label={label} error={error}>
+      <TextSuggest
+        id={name}
+        name={name}
+        suggestions={suggestions}
+        defaultValue={defaultValue}
+        invalid={Boolean(error)}
+        describedBy={error ? `${name}-error` : undefined}
       />
     </FieldShell>
   );

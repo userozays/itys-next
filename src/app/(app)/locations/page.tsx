@@ -52,7 +52,12 @@ export default async function LocationsPage() {
             <TableBody>
               {locations.map((l) => (
                 <TableRow key={l.id}>
-                  <TableCell className="font-medium">{l.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {/* Opens the device list filtered to this location (QA Ö3). */}
+                    <Link href={`/assets?location=${l.id}`} className="underline-offset-4 hover:underline">
+                      {l.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="tabular-nums">
                     {l.assetCount > 0 ? (
                       <Link href={`/assets?location=${l.id}`} className="underline underline-offset-4">

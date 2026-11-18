@@ -123,22 +123,46 @@ export function listAssets(
   const total = db.select({ n: sql<number>`count(*)` }).from(assets).where(where).get()?.n ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(Math.max(1, Math.trunc(filter.page ?? 1) || 1), pageCount);
-  const sortKey = filter.sort ?? "name";
-  const column = sortColumns[sortKey];
-  const order = [filter.dir === "desc" ? desc(column) : asc(column)];
-  if (nullableSort.has(sortKey)) order.unshift(sql`${column} is null`);
-
   const rows = db
     .select(listColumns)
     .from(assets)
     .leftJoin(locations, eq(locations.id, assets.locationId))
     .where(where)
-    .orderBy(...order, asc(assets.id))
+    .orderBy(...listOrder(filter))
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE)
     .all();
 
   return { rows, total, page, pageCount };
+}
+
+function listOrder(filter: AssetFilter): SQL[] {
+  const sortKey = filter.sort ?? "name";
+  const column = sortColumns[sortKey];
+  const order = [filter.dir === "desc" ? desc(column) : asc(column)];
+  if (nullableSort.has(sortKey)) order.unshift(sql`${column} is null`);
+  return [...order, asc(assets.id)];
+}
+
+export const MAX_EXPORT_ROWS = 20_000;
+
+/** Every device matching a list filter, in list order, for a spreadsheet download (QA Ö1). */
+export function listAssetsForExport(
+  db: Db,
+  actor: Actor,
+  companyId: number,
+  filter: AssetFilter = {},
+): { rows: AssetListItem[]; truncated: boolean } {
+  getCompany(db, actor, companyId);
+  const rows = db
+    .select(listColumns)
+    .from(assets)
+    .leftJoin(locations, eq(locations.id, assets.locationId))
+    .where(filterWhere(companyId, filter))
+    .orderBy(...listOrder(filter))
+    .limit(MAX_EXPORT_ROWS + 1)
+    .all();
+  return { rows: rows.slice(0, MAX_EXPORT_ROWS), truncated: rows.length > MAX_EXPORT_ROWS };
 }
 
 /** Loads an asset only if the actor may access its company. */
@@ -347,6 +371,19 @@ export function listAssetOptions(db: Db, actor: Actor, companyId: number): { id:
     .where(and(eq(assets.companyId, companyId), ne(assets.status, "retired")))
     .orderBy(trKey(assets.name), asc(assets.id))
     .all();
+}
+
+/** Names devices in the company are assigned to, for suggestions while typing (QA Ö4). */
+export function listAssignees(db: Db, actor: Actor, companyId: number): string[] {
+  getCompany(db, actor, companyId);
+  return db
+    .selectDistinct({ name: assets.assignedTo })
+    .from(assets)
+    .where(and(eq(assets.companyId, companyId), isNotNull(assets.assignedTo)))
+    .orderBy(trKey(assets.assignedTo))
+    .limit(2000)
+    .all()
+    .map((r) => r.name!);
 }
 
 export const MAX_LABELS = 500;

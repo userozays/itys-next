@@ -26,7 +26,7 @@ export function CompanySwitcher({ companies, activeId }: { companies: Option[]; 
         if (value !== null) startTransition(() => call(() => switchCompanyAction(Number(value)), () => undefined));
       }}
     >
-      <SelectTrigger aria-label={t("company")} data-company-id={activeId ?? ""} className="max-w-[14rem] min-w-0 font-medium">
+      <SelectTrigger aria-label={t("company")} data-company-id={activeId ?? ""} className="w-auto min-w-0 flex-1 font-medium sm:max-w-[16rem] sm:flex-none">
         <SelectValue />
       </SelectTrigger>
       {/* Opens below the control instead of over it. */}

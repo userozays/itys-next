@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
+import { listAssignees } from "@/server/services/assets";
 import { listLocations } from "@/server/services/locations";
 import { AssetForm } from "../../asset-form";
 import { loadAsset } from "../load";
@@ -16,11 +17,12 @@ export default async function EditAssetPage({ params }: PageProps<"/assets/[id]/
   const asset = loadAsset(actor, (await params).id);
   const t = await getTranslations("assets");
   const locations = listLocations(getDb(), actor, asset.companyId).map((l) => ({ id: l.id, name: l.name }));
+  const assignees = listAssignees(getDb(), actor, asset.companyId);
 
   return (
     <>
       <PageHeader title={t("edit")} description={`${asset.name} · ${asset.tag}`} />
-      <AssetForm asset={asset} locations={locations} />
+      <AssetForm asset={asset} locations={locations} assignees={assignees} />
     </>
   );
 }

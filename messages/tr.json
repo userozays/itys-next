@@ -77,7 +77,8 @@
     "seeWarrantySoon": "Garantisi bitmek üzere olan cihazlar",
     "seeWarrantyExpired": "Garantisi biten cihazlar",
     "seeLicensesSoon": "Süresi dolmak üzere olan lisanslar",
-    "seeLicensesExpired": "Süresi dolan lisanslar"
+    "seeLicensesExpired": "Süresi dolan lisanslar",
+    "activeAssets": "{count} aktif (hurda hariç)"
   },
   "companies": {
     "title": "Şirketler",
@@ -277,7 +278,8 @@
       "all": "Tüm garantiler",
       "soon": "Garanti bitiyor (30 gün)",
       "expired": "Garanti bitti"
-    }
+    },
+    "tagChangeWarning": "Etiket no değişince bu cihaza basılmış QR etiketi artık onu açmaz; yeni etiket basman gerekir."
   },
   "locations": {
     "title": "Konumlar",
@@ -493,5 +495,12 @@
     "retry": "Tekrar dene",
     "home": "Panoya dön",
     "skipToContent": "İçeriğe atla"
+  },
+  "export": {
+    "button": "Dışa aktar",
+    "xlsx": "Excel (.xlsx)",
+    "csv": "CSV (.csv)",
+    "assetsFile": "cihazlar",
+    "licensesFile": "lisanslar"
   }
 }

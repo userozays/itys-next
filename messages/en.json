@@ -77,7 +77,8 @@
     "seeWarrantySoon": "Devices whose warranty ends soon",
     "seeWarrantyExpired": "Devices whose warranty has ended",
     "seeLicensesSoon": "Licenses expiring soon",
-    "seeLicensesExpired": "Expired licenses"
+    "seeLicensesExpired": "Expired licenses",
+    "activeAssets": "{count} active (excluding retired)"
   },
   "companies": {
     "title": "Companies",
@@ -277,7 +278,8 @@
       "all": "All warranties",
       "soon": "Warranty ending (30 days)",
       "expired": "Warranty ended"
-    }
+    },
+    "tagChangeWarning": "Once the tag changes, a QR label printed for this device no longer opens it; print a new label."
   },
   "locations": {
     "title": "Locations",
@@ -493,5 +495,12 @@
     "retry": "Try again",
     "home": "Back to dashboard",
     "skipToContent": "Skip to content"
+  },
+  "export": {
+    "button": "Export",
+    "xlsx": "Excel (.xlsx)",
+    "csv": "CSV (.csv)",
+    "assetsFile": "devices",
+    "licensesFile": "licenses"
   }
 }

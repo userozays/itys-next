@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { StatusBadge, WarrantyBadge } from "@/components/asset-badges";
 import { EmptyState } from "@/components/empty-state";
+import { ExportMenu } from "@/components/export-menu";
 import { FilterForm } from "@/components/filter-form";
 import { RememberListUrl } from "@/components/list-memory";
 import { PageHeader } from "@/components/page-header";
@@ -11,20 +12,17 @@ import { SelectBox } from "@/components/select-box";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { expiryFilters, formatDate, todayIso, type ExpiryFilter } from "@/lib/dates";
+import { expiryFilters, formatDate, todayIso } from "@/lib/dates";
+import { assetFilterFromParams } from "@/lib/list-params";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
-import { assetStatuses, assetTypes, type AssetStatus, type AssetType } from "@/server/db/schema";
-import { assetSortKeys, listAssets, type AssetSortKey } from "@/server/services/assets";
+import { assetStatuses, assetTypes } from "@/server/db/schema";
+import { listAssets, type AssetSortKey } from "@/server/services/assets";
 import { listLocations } from "@/server/services/locations";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("assets"))("title") };
 }
-
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-const oneOf = <T extends string>(allowed: readonly T[], v: string): T | undefined =>
-  allowed.includes(v as T) ? (v as T) : undefined;
 
 export default async function AssetsPage({ searchParams }: PageProps<"/assets">) {
   const actor = await requireActor();
@@ -39,17 +37,7 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
     );
   }
 
-  const params = await searchParams;
-  const filter = {
-    q: one(params.q).trim(),
-    type: oneOf<AssetType>(assetTypes, one(params.type)),
-    status: oneOf<AssetStatus>(assetStatuses, one(params.status)),
-    locationId: Number(one(params.location)) || undefined,
-    sort: oneOf<AssetSortKey>(assetSortKeys, one(params.sort)) ?? "name",
-    dir: one(params.dir) === "desc" ? ("desc" as const) : ("asc" as const),
-    page: Number(one(params.page)) || 1,
-    warranty: oneOf<ExpiryFilter>(expiryFilters, one(params.warranty)),
-  };
+  const filter = assetFilterFromParams(await searchParams);
   const db = getDb();
   const { rows, total, page, pageCount } = listAssets(db, actor, company.id, filter);
   const locations = listLocations(db, actor, company.id);
@@ -105,6 +93,7 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
             <Link href={href({ page: undefined }).replace("/assets", "/assets/labels")} className={buttonVariants({ variant: "outline" })}>
               {t("assets.printLabels")}
             </Link>
+            <ExportMenu href={href({ page: undefined }).replace("/assets", "/assets/export")} />
             <Link href="/assets/import" className={buttonVariants({ variant: "outline" })}>
               {t("assets.import")}
             </Link>

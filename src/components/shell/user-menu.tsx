@@ -42,7 +42,8 @@ export function UserMenu({ name, roleLabel }: { name: string; roleLabel: string 
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="ghost" size="sm" aria-label={t("userMenu")} />}>
         <UserRound aria-hidden />
-        <span className="max-w-[10rem] truncate">{name}</span>
+        {/* Only the icon on phones, leaving room for the company name. */}
+        <span className="hidden max-w-[10rem] truncate sm:inline">{name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuGroup>

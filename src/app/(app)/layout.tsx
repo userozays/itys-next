@@ -31,12 +31,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <NavLinks isAdmin={isAdmin} orientation="vertical" />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-12 print:hidden items-center gap-2 border-b px-4">
+        <header className="flex h-12 min-w-0 print:hidden items-center gap-2 border-b px-3 sm:px-4">
           <Link href="/" className="font-heading font-semibold md:hidden">
             {t("app.name")}
           </Link>
           <CompanySwitcher companies={companies} activeId={active?.id ?? null} />
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <ThemeToggle />
             <UserMenu name={actor.name} roleLabel={t(`users.roles.${actor.role}`)} />
           </div>

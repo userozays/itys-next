@@ -6,12 +6,14 @@ import { EmptyState } from "@/components/empty-state";
 import { FilterForm } from "@/components/filter-form";
 import { SelectBox } from "@/components/select-box";
 import { RememberListUrl } from "@/components/list-memory";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader } from "@/components/page-header";
 import { SeatUsage } from "@/components/seat-usage";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { expiryFilters, formatDate, todayIso } from "@/lib/dates";
+import { licenseFilterFromParams } from "@/lib/list-params";
 import { formatMoney } from "@/lib/money";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { getDb } from "@/server/db/client";
@@ -35,9 +37,9 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
   }
 
   const params = await searchParams;
-  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-  const q = one(params.q).trim();
-  const expiry = expiryFilters.find((v) => v === one(params.expiry));
+  const { q, expiry } = licenseFilterFromParams(params);
+  const exportQuery = new URLSearchParams(Object.entries({ q, expiry }).filter((e): e is [string, string] => Boolean(e[1])));
+  const exportHref = `/licenses/export${exportQuery.size ? `?${exportQuery}` : ""}`;
   const filtered = Boolean(q || expiry);
   const rows = listLicenses(getDb(), actor, company.id, q, expiry);
   const locale = await getLocale();
@@ -50,9 +52,12 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
         title={t("licenses.title")}
         description={t("licenses.description", { company: company.name })}
         action={
-          <Link href="/licenses/new" className={buttonVariants()}>
-            {t("licenses.new")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <ExportMenu href={exportHref} />
+            <Link href="/licenses/new" className={buttonVariants()}>
+              {t("licenses.new")}
+            </Link>
+          </div>
         }
       />
       <FilterForm action="/licenses" className="flex flex-wrap items-center gap-2">
