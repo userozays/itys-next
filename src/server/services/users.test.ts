@@ -47,7 +47,7 @@ describe("user management", () => {
     });
 
     expect(listUsers(db, admin).find((u) => u.id === id)).toMatchObject({ role: "technician", companyIds: [a] });
-    const tech = { id, username: "tech", name: "Teknisyen", role: "technician" as const };
+    const tech = { id, username: "tech", name: "Teknisyen", role: "technician" as const, canSeeLicenseKeys: false };
     expect(listCompanies(db, tech).map((c) => c.name)).toEqual(["A"]);
   });
 

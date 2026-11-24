@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { getActiveCompany, requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { LicenseForm } from "../license-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -10,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NewLicensePage() {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.manageLicenses);
   const company = await getActiveCompany(actor);
   if (!company) redirect("/licenses");
   const t = await getTranslations("licenses");

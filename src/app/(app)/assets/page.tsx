@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { expiryFilters, formatDate, todayIso } from "@/lib/dates";
 import { assetFilterFromParams } from "@/lib/list-params";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { assetStatuses, assetTypes } from "@/server/db/schema";
 import { listAssets, type AssetSortKey } from "@/server/services/assets";
@@ -82,6 +83,8 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
     );
   };
 
+  const canEdit = can.editInventory(actor);
+
   return (
     <>
       <RememberListUrl list="assets" />
@@ -90,16 +93,22 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
         description={t("assets.description", { company: company.name })}
         action={
           <div className="flex flex-wrap gap-2">
-            <Link href={href({ page: undefined }).replace("/assets", "/assets/labels")} className={buttonVariants({ variant: "outline" })}>
-              {t("assets.printLabels")}
-            </Link>
+            {canEdit ? (
+              <Link href={href({ page: undefined }).replace("/assets", "/assets/labels")} className={buttonVariants({ variant: "outline" })}>
+                {t("assets.printLabels")}
+              </Link>
+            ) : null}
             <ExportMenu href={href({ page: undefined }).replace("/assets", "/assets/export")} />
-            <Link href="/assets/import" className={buttonVariants({ variant: "outline" })}>
-              {t("assets.import")}
-            </Link>
-            <Link href="/assets/new" className={buttonVariants()}>
-              {t("assets.new")}
-            </Link>
+            {canEdit ? (
+              <>
+                <Link href="/assets/import" className={buttonVariants({ variant: "outline" })}>
+                  {t("assets.import")}
+                </Link>
+                <Link href="/assets/new" className={buttonVariants()}>
+                  {t("assets.new")}
+                </Link>
+              </>
+            ) : null}
           </div>
         }
       />
@@ -153,7 +162,7 @@ export default async function AssetsPage({ searchParams }: PageProps<"/assets">)
         <EmptyState
           title={filtered ? t("assets.emptyFiltered") : t("assets.empty")}
           action={
-            filtered ? null : (
+            filtered || !canEdit ? null : (
               <Link href="/assets/new" className={buttonVariants()}>
                 {t("dashboard.addFirst")}
               </Link>

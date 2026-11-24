@@ -146,9 +146,12 @@ test("a technician works with own company's licenses but cannot reach the other 
   await page.getByRole("button", { name: "Anahtarı göster" }).click();
   await expect(page.getByTestId("license-key")).toHaveText(KEY);
   await expect(page.getByRole("button", { name: "Sil" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Düzenle" })).toHaveCount(0);
 
   expect((await page.goto(hiddenLicensePath))?.status()).toBe(404);
-  expect((await page.goto(`${hiddenLicensePath}/edit`))?.status()).toBe(404);
+  // Technicians do not edit licenses at all, so the edit page sends them to the dashboard.
+  await page.goto(`${hiddenLicensePath}/edit`);
+  await expect(page).toHaveURL(/\/$/);
   expect(await page.content()).not.toContain("SECRET-OTHER-COMPANY");
 });
 

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { getActiveCompany, requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { UploadForm } from "./import-widgets";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ImportPage() {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.editInventory);
   const t = await getTranslations();
   const company = await getActiveCompany(actor);
   if (!company) {

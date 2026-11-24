@@ -4,6 +4,8 @@
  * Demo sign-ins (local only, never use in production):
  *   admin / demo-admin-2026        tech.ayse / demo-tech-2026
  * The other technicians (tech.can, tech.elif, tech.murat) share the technician password.
+ * tech.can may also read license keys; izleyici.deniz is a read-only viewer
+ * with the technician password.
  * The data is generated from a fixed seed, so every run produces the same records.
  */
 import path from "node:path";
@@ -136,7 +138,7 @@ const companySpecs: CompanySpec[] = [
 ];
 
 const adminId = await createFirstAdmin(db, { username: "admin", name: "Demo Yönetici", password: "demo-admin-2026" });
-const admin = { id: adminId, username: "admin", name: "Demo Yönetici", role: "admin" as const };
+const admin = { id: adminId, username: "admin", name: "Demo Yönetici", role: "admin" as const, canSeeLicenseKeys: false };
 
 const companyIds: number[] = [];
 let assetTotal = 0;
@@ -236,7 +238,15 @@ const technicians: [string, string, number[]][] = [
   ["tech.murat", "Murat Güneş", [companyIds[6]!, companyIds[7]!, companyIds[9]!]],
 ];
 for (const [username, name, ids] of technicians) {
-  await createUser(db, admin, { username, name, password: "demo-tech-2026", role: "technician", companyIds: ids });
+  const canSeeLicenseKeys = username === "tech.can";
+  await createUser(db, admin, { username, name, password: "demo-tech-2026", role: "technician", companyIds: ids, canSeeLicenseKeys });
 }
+await createUser(db, admin, {
+  username: "izleyici.deniz",
+  name: "Deniz Aksoy",
+  password: "demo-tech-2026",
+  role: "viewer",
+  companyIds: [companyIds[0]!, companyIds[1]!],
+});
 
-console.log(`Seeded ${companySpecs.length} companies, ${assetTotal} devices, ${licenseTotal} licenses and ${technicians.length + 1} users into ${file}`);
+console.log(`Seeded ${companySpecs.length} companies, ${assetTotal} devices, ${licenseTotal} licenses and ${technicians.length + 2} users into ${file}`);

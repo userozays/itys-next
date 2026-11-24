@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
-import { requireActor } from "@/server/auth/context";
+import { requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { listAssignees } from "@/server/services/assets";
 import { listLocations } from "@/server/services/locations";
@@ -13,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EditAssetPage({ params }: PageProps<"/assets/[id]/edit">) {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.editInventory);
   const asset = loadAsset(actor, (await params).id);
   const t = await getTranslations("assets");
   const locations = listLocations(getDb(), actor, asset.companyId).map((l) => ({ id: l.id, name: l.name }));

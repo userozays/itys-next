@@ -28,7 +28,7 @@ async function world() {
   const a = addCompany(db, "A");
   const b = addCompany(db, "B");
   const admin = await addUser(db, "admin", "admin");
-  const techA = await addUser(db, "tech-a", "technician", { companyIds: [a] });
+  const techA = await addUser(db, "tech-a", "technician", { companyIds: [a], canSeeLicenseKeys: true });
   const pcA = createAsset(db, admin, a, assetInput({ name: "A-PC" }));
   const pcA2 = createAsset(db, admin, a, assetInput({ name: "A-PC-2" }));
   const pcB = createAsset(db, admin, b, assetInput({ name: "B-PC" }));
@@ -75,8 +75,6 @@ describe("license isolation between companies", () => {
     expect(() => listLicenses(db, techA, b)).toThrow("notFound");
     expect(() => getLicense(db, techA, other.id)).toThrow("notFound");
     expect(() => revealLicenseKey(db, techA, other.id)).toThrow("notFound");
-    expect(() => createLicense(db, techA, b, input())).toThrow("notFound");
-    expect(() => updateLicense(db, techA, other.id, input({ name: "Sızma" }))).toThrow("notFound");
     expect(() => assignLicense(db, techA, other.id, pcA.id)).toThrow("notFound");
     expect(() => listAssignedAssets(db, techA, other.id)).toThrow("notFound");
     expect(getLicense(db, admin, other.id).name).toBe("B Lisansı");
@@ -138,9 +136,9 @@ describe("seats", () => {
 });
 
 describe("license management", () => {
-  it("a technician creates and edits; only an admin deletes", async () => {
+  it("an admin creates and deletes; a technician assigns", async () => {
     const { db, a, admin, techA, pcA } = await world();
-    const license = createLicense(db, techA, a, input({ vendor: "Microsoft", cost: 125050, expiryDate: "2027-01-31" }));
+    const license = createLicense(db, admin, a, input({ vendor: "Microsoft", cost: 125050, expiryDate: "2027-01-31" }));
     expect(license).toMatchObject({ vendor: "Microsoft", costMinor: 125050, currency: "TRY", expiryDate: "2027-01-31" });
 
     assignLicense(db, techA, license.id, pcA.id);

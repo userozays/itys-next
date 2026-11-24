@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { formatDate, todayIso } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { getDb } from "@/server/db/client";
@@ -27,7 +28,7 @@ function Stat({ label, value, note }: { label: string; value: string | number; n
 }
 
 /** Seat usage, licenses ending soon and what licenses cost, per currency (QA Ö6). */
-async function LicenseSummaryCard({ summary, locale }: { summary: LicenseSummary; locale: string }) {
+async function LicenseSummaryCard({ summary, locale, withCosts }: { summary: LicenseSummary; locale: string; withCosts: boolean }) {
   const t = await getTranslations("dashboard.licenseSummary");
   const money = (amounts: MoneyByCurrency) => {
     const parts = currencies.filter((c) => amounts[c]).map((c) => formatMoney(amounts[c]!, c, locale));
@@ -43,7 +44,7 @@ async function LicenseSummaryCard({ summary, locale }: { summary: LicenseSummary
         </Link>
       </CardHeader>
       <CardContent>
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className={`grid gap-4 sm:grid-cols-2 ${withCosts ? "lg:grid-cols-4" : ""}`}>
           <div className="grid content-start gap-1">
             <dt className="text-xs text-muted-foreground">{t("seats")}</dt>
             {summary.seatsTotal > 0 ? (
@@ -68,14 +69,18 @@ async function LicenseSummaryCard({ summary, locale }: { summary: LicenseSummary
               </Link>
             </dd>
           </div>
-          <div className="grid content-start gap-1">
-            <dt className="text-xs text-muted-foreground">{t("yearly")}</dt>
-            <dd className="font-medium tabular-nums">{money(summary.yearlySubscriptions)}</dd>
-          </div>
-          <div className="grid content-start gap-1">
-            <dt className="text-xs text-muted-foreground">{t("perpetual")}</dt>
-            <dd className="font-medium tabular-nums">{money(summary.perpetualPurchases)}</dd>
-          </div>
+          {withCosts ? (
+            <>
+              <div className="grid content-start gap-1">
+                <dt className="text-xs text-muted-foreground">{t("yearly")}</dt>
+                <dd className="font-medium tabular-nums">{money(summary.yearlySubscriptions)}</dd>
+              </div>
+              <div className="grid content-start gap-1">
+                <dt className="text-xs text-muted-foreground">{t("perpetual")}</dt>
+                <dd className="font-medium tabular-nums">{money(summary.perpetualPurchases)}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
       </CardContent>
     </Card>
@@ -146,9 +151,11 @@ export default async function DashboardPage() {
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             {t("noAssets")}
-            <Link href="/assets/new" className={buttonVariants()}>
-              {t("addFirst")}
-            </Link>
+            {can.editInventory(actor) ? (
+              <Link href="/assets/new" className={buttonVariants()}>
+                {t("addFirst")}
+              </Link>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -167,7 +174,7 @@ export default async function DashboardPage() {
           />
         </div>
       )}
-      {licenses && licenses.count > 0 ? <LicenseSummaryCard summary={licenses} locale={locale} /> : null}
+      {licenses && licenses.count > 0 ? <LicenseSummaryCard summary={licenses} locale={locale} withCosts={can.seeCosts(actor)} /> : null}
       {active ? (
         <Card>
           <CardHeader>

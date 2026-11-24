@@ -16,6 +16,7 @@ import { expiryFilters, formatDate, todayIso } from "@/lib/dates";
 import { licenseFilterFromParams } from "@/lib/list-params";
 import { formatMoney } from "@/lib/money";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { listLicenses } from "@/server/services/licenses";
 
@@ -44,6 +45,8 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
   const rows = listLicenses(getDb(), actor, company.id, q, expiry);
   const locale = await getLocale();
   const today = todayIso();
+  const canManage = can.manageLicenses(actor);
+  const seesCosts = can.seeCosts(actor);
 
   return (
     <>
@@ -54,9 +57,11 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
         action={
           <div className="flex flex-wrap gap-2">
             <ExportMenu href={exportHref} />
-            <Link href="/licenses/new" className={buttonVariants()}>
-              {t("licenses.new")}
-            </Link>
+            {canManage ? (
+              <Link href="/licenses/new" className={buttonVariants()}>
+                {t("licenses.new")}
+              </Link>
+            ) : null}
           </div>
         }
       />
@@ -89,7 +94,7 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
         <EmptyState
           title={filtered ? t("licenses.emptyFiltered") : t("licenses.empty")}
           action={
-            filtered ? null : (
+            filtered || !canManage ? null : (
               <Link href="/licenses/new" className={buttonVariants()}>
                 {t("licenses.addFirst")}
               </Link>
@@ -104,7 +109,7 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
                 <TableHead>{t("licenses.name")}</TableHead>
                 <TableHead>{t("licenses.seatsUsage")}</TableHead>
                 <TableHead>{t("licenses.expiryDate")}</TableHead>
-                <TableHead className="text-right">{t("licenses.cost")}</TableHead>
+                {seesCosts ? <TableHead className="text-right">{t("licenses.cost")}</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -127,12 +132,14 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
                       <LicenseExpiryBadge end={l.expiryDate} today={today} />
                     </span>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(l.costMinor, l.currency, locale)}
-                    {l.costMinor !== null && l.billingPeriod ? (
-                      <span className="ml-1 text-xs text-muted-foreground">{t(`licenses.per.${l.billingPeriod}`)}</span>
-                    ) : null}
-                  </TableCell>
+                  {seesCosts ? (
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(l.costMinor, l.currency, locale)}
+                      {l.costMinor !== null && l.billingPeriod ? (
+                        <span className="ml-1 text-xs text-muted-foreground">{t(`licenses.per.${l.billingPeriod}`)}</span>
+                      ) : null}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

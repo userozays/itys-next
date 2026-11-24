@@ -1,4 +1,5 @@
 import { and, eq, lt, sql } from "drizzle-orm";
+import { assertCan, can } from "../auth/permissions";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, importJobs, locations } from "../db/schema";
@@ -35,6 +36,7 @@ export type ImportPreview = {
 
 /** Stores an uploaded sheet for the company and guesses the column mapping. */
 export function createImportJob(db: Db, actor: Actor, companyId: number, filename: string, sheet: ParsedSheet): number {
+  assertCan(can.editInventory(actor));
   getCompany(db, actor, companyId);
   // Abandoned uploads are not kept around.
   db.delete(importJobs)
@@ -56,6 +58,7 @@ export function createImportJob(db: Db, actor: Actor, companyId: number, filenam
 
 /** Loads an import only if the actor may access its company. */
 export function getImportJob(db: Db, actor: Actor, jobId: number): ImportJob {
+  assertCan(can.editInventory(actor));
   const row = db.select().from(importJobs).where(eq(importJobs.id, jobId)).get();
   if (!row) throw new AppError("notFound");
   getCompany(db, actor, row.companyId);

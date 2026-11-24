@@ -110,7 +110,7 @@
   },
   "users": {
     "title": "Users",
-    "description": "Administrators see every company; technicians only the ones they are assigned to.",
+    "description": "Administrators see every company; technicians and viewers only the companies they are assigned to.",
     "new": "New user",
     "edit": "Edit user",
     "username": "Username",
@@ -118,8 +118,16 @@
     "role": "Role",
     "roles": {
       "admin": "Administrator",
-      "technician": "Technician"
+      "technician": "Technician",
+      "viewer": "Viewer"
     },
+    "roleHints": {
+      "admin": "Does everything: licenses and costs, deleting, users, companies, notifications.",
+      "technician": "Adds and edits devices and locations; assigns licenses to devices. Cannot add licenses or see costs.",
+      "viewer": "Only views and exports. Cannot change anything; does not see costs or license keys."
+    },
+    "canSeeLicenseKeys": "Can see license keys",
+    "keyAccess": "Can see license keys",
     "companies": "Companies",
     "allCompanies": "All",
     "noCompanies": "None assigned",
@@ -337,6 +345,7 @@
     "clearKey": "Delete the stored key",
     "showKey": "Show key",
     "noKey": "No key entered.",
+    "keyNotAllowed": "A key is stored. Ask an admin for access to see it.",
     "expiryDate": "Expires",
     "perpetual": "Perpetual",
     "cost": "Cost",

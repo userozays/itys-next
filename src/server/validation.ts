@@ -41,8 +41,8 @@ const passwordWithoutUsername = <T extends { username: string; password: string 
   !searchFold(v.password).includes(searchFold(v.username));
 const passwordRule = { message: "passwordHasUsername", path: ["password"], when: hasFields("username", "password") };
 
-/** A technician without companies sees nothing, so at least one is required (QA D8). */
-const technicianHasCompany = (v: { role: string; companyIds: number[] }) => v.role !== "technician" || v.companyIds.length > 0;
+/** A technician or viewer without companies sees nothing, so at least one is required (QA D8). */
+const technicianHasCompany = (v: { role: string; companyIds: number[] }) => v.role === "admin" || v.companyIds.length > 0;
 const companyRule = { message: "technicianCompany", path: ["companyIds"], when: hasFields("role", "companyIds") };
 
 export const firstAdminInput = z
@@ -50,12 +50,12 @@ export const firstAdminInput = z
   .refine(passwordWithoutUsername, passwordRule);
 
 export const newUserInput = z
-  .object({ username, name: personName, password, role: z.enum(roles), companyIds })
+  .object({ username, name: personName, password, role: z.enum(roles), companyIds, canSeeLicenseKeys: z.boolean().optional() })
   .refine(passwordWithoutUsername, passwordRule)
   .refine(technicianHasCompany, companyRule);
 
 export const userUpdateInput = z
-  .object({ name: personName, role: z.enum(roles), active: z.boolean(), companyIds })
+  .object({ name: personName, role: z.enum(roles), active: z.boolean(), companyIds, canSeeLicenseKeys: z.boolean().optional() })
   .refine(technicianHasCompany, companyRule);
 
 export const companyInput = z.object({

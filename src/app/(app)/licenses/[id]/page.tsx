@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, todayIso } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { listAssetOptions } from "@/server/services/assets";
 import { listAssignedAssets } from "@/server/services/licenses";
@@ -51,6 +52,8 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
     { value: t("licenses.groupOther"), items: free.filter((a) => !isComputer(a.type)).map(toItem) },
   ];
   const seatsFull = license.seats != null && license.usedSeats >= license.seats;
+  const canAssign = can.editInventory(actor);
+  const canManage = can.manageLicenses(actor);
 
   return (
     <>
@@ -67,9 +70,11 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/licenses/${license.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-            {t("common.edit")}
-          </Link>
+          {canManage ? (
+            <Link href={`/licenses/${license.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+              {t("common.edit")}
+            </Link>
+          ) : null}
           {actor.role === "admin" ? (
             <ConfirmDelete
               title={t("licenses.deleteTitle")}
@@ -99,11 +104,13 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
                 {license.billingPeriod ? ` · ${t(`licenses.periods.${license.billingPeriod}`)}` : null}
               </Item>
               <Item label={t("licenses.purchaseDate")}>{license.purchaseDate ? formatDate(license.purchaseDate, locale) : null}</Item>
-              <Item label={t("licenses.cost")}>
-                {license.costMinor === null
-                  ? null
-                  : `${formatMoney(license.costMinor, license.currency, locale)}${license.billingPeriod ? ` ${t(`licenses.per.${license.billingPeriod}`)}` : ""}`}
-              </Item>
+              {can.seeCosts(actor) ? (
+                <Item label={t("licenses.cost")}>
+                  {license.costMinor === null
+                    ? null
+                    : `${formatMoney(license.costMinor, license.currency, locale)}${license.billingPeriod ? ` ${t(`licenses.per.${license.billingPeriod}`)}` : ""}`}
+                </Item>
+              ) : null}
               <Item label={t("assets.updatedAt")}>{formatDate(license.updatedAt, locale)}</Item>
             </dl>
             {license.notes ? <p className="border-t pt-4 text-sm whitespace-pre-wrap">{license.notes}</p> : null}
@@ -115,8 +122,10 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
             <CardTitle>{t("licenses.sections.key")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {license.hasKey ? (
+            {license.hasKey && can.seeLicenseKeys(actor) ? (
               <KeyReveal licenseId={license.id} />
+            ) : license.hasKey ? (
+              <p className="text-sm text-muted-foreground">{t("licenses.keyNotAllowed")}</p>
             ) : (
               <p className="text-sm text-muted-foreground">{t("licenses.noKey")}</p>
             )}
@@ -137,12 +146,12 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
                     <Link href={`/assets/${a.id}`} className="min-w-0 truncate text-sm underline-offset-4 hover:underline">
                       {a.name} <span className="font-mono text-xs text-muted-foreground">{a.tag}</span>
                     </Link>
-                    <UnassignButton licenseId={license.id} assetId={a.id} name={a.name} />
+                    {canAssign ? <UnassignButton licenseId={license.id} assetId={a.id} name={a.name} /> : null}
                   </li>
                 ))}
               </ul>
             )}
-            <AssignForm licenseId={license.id} groups={groups} seatsFull={seatsFull} />
+            {canAssign ? <AssignForm licenseId={license.id} groups={groups} seatsFull={seatsFull} /> : null}
           </CardContent>
         </Card>
       </div>

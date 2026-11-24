@@ -5,7 +5,8 @@ import { AssetLabel } from "@/components/asset-label";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { PrintButton } from "@/components/print-button";
-import { appOrigin, getActiveCompany, requireActor } from "@/server/auth/context";
+import { appOrigin, getActiveCompany, requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { assetStatuses, assetTypes, type AssetStatus, type AssetType } from "@/server/db/schema";
 import { expiryFilters, type ExpiryFilter } from "@/lib/dates";
@@ -23,7 +24,7 @@ const oneOf = <T extends string>(allowed: readonly T[], v: string): T | undefine
 
 /** Labels for one device (?id=) or for everything matching the device list's filter. */
 export default async function LabelsPage({ searchParams }: PageProps<"/assets/labels">) {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.editInventory);
   const t = await getTranslations();
   const params = await searchParams;
   const db = getDb();

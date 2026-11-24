@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { moneyInputValue } from "@/lib/money";
-import { requireActor } from "@/server/auth/context";
+import { requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { LicenseForm } from "../../license-form";
 import { loadLicense } from "../load";
 
@@ -11,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EditLicensePage({ params }: PageProps<"/licenses/[id]/edit">) {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.manageLicenses);
   const license = loadLicense(actor, (await params).id);
   const t = await getTranslations("licenses");
   const locale = await getLocale();

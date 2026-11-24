@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { listLocations } from "@/server/services/locations";
 import { deleteLocationAction } from "./actions";
@@ -29,13 +30,14 @@ export default async function LocationsPage() {
     );
   }
   const locations = listLocations(getDb(), actor, company.id);
+  const canEdit = can.editInventory(actor);
 
   return (
     <>
       <PageHeader
         title={t("locations.title")}
         description={t("locations.description", { company: company.name })}
-        action={<LocationDialog trigger={<Button>{t("locations.new")}</Button>} />}
+        action={canEdit ? <LocationDialog trigger={<Button>{t("locations.new")}</Button>} /> : null}
       />
       {locations.length === 0 ? (
         <EmptyState title={t("locations.empty")} />
@@ -46,7 +48,7 @@ export default async function LocationsPage() {
               <TableRow>
                 <TableHead>{t("locations.name")}</TableHead>
                 <TableHead>{t("locations.assetCount")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
+                {canEdit ? <TableHead className="text-right">{t("common.actions")}</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,28 +69,33 @@ export default async function LocationsPage() {
                       0
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <LocationDialog
-                      location={{ id: l.id, name: l.name }}
-                      trigger={
-                        <Button variant="ghost" size="sm" aria-label={`${t("common.edit")}: ${l.name}`}>
-                          {t("common.edit")}
-                        </Button>
-                      }
-                    />
-                    {actor.role === "admin" ? (
-                      <ConfirmDelete
-                        title={t("locations.deleteTitle")}
-                        description={t("locations.deleteDescription", { name: l.name, count: l.assetCount })}
-                        action={deleteLocationAction.bind(null, l.id)}
+                  {canEdit ? (
+                    <TableCell className="text-right">
+                      <LocationDialog
+                        location={{ id: l.id, name: l.name }}
                         trigger={
-                          <Button variant="ghost" size="sm" aria-label={`${t("common.delete")}: ${l.name}`}>
-                            {t("common.delete")}
+                          <Button variant="ghost" size="sm" aria-label={`${t("common.edit")}: ${l.name}`}>
+                            {t("common.edit")}
                           </Button>
                         }
                       />
-                    ) : null}
-                  </TableCell>
+                      {actor.role === "admin" ? (
+                        <ConfirmDelete
+                          title={t("locations.deleteTitle")}
+                          description={t("locations.deleteDescription", {
+                            name: l.name,
+                            count: l.assetCount,
+                          })}
+                          action={deleteLocationAction.bind(null, l.id)}
+                          trigger={
+                            <Button variant="ghost" size="sm" aria-label={`${t("common.delete")}: ${l.name}`}>
+                              {t("common.delete")}
+                            </Button>
+                          }
+                        />
+                      ) : null}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

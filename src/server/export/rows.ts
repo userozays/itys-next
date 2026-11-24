@@ -43,25 +43,29 @@ export function assetSheet(rows: AssetListItem[], t: T, sheetName: string): Shee
 }
 
 /** License keys are never exported; they are only shown one at a time on the license page. */
-export function licenseSheet(rows: LicenseView[], t: T, sheetName: string): Sheet {
+/** Cost columns only for those who may see costs (admins). */
+export function licenseSheet(rows: LicenseView[], t: T, sheetName: string, withCosts = true): Sheet {
+  const columns: { key: string; width: number; value: (l: LicenseView) => Cell }[] = [
+    { key: "name", width: 28, value: (l) => l.name },
+    { key: "vendor", width: 18, value: (l) => l.vendor },
+    { key: "kind", width: 15, value: (l) => t(`licenses.kinds.${l.kind}`) },
+    { key: "billingPeriod", width: 12, value: (l) => (l.billingPeriod ? t(`licenses.periods.${l.billingPeriod}`) : null) },
+    { key: "seats", width: 13, value: (l) => l.seats ?? t("licenses.unlimited") },
+    { key: "seatsUsage", width: 10, value: (l) => l.usedSeats },
+    { key: "purchaseDate", width: 12, value: (l) => (l.purchaseDate ? { date: l.purchaseDate } : null) },
+    { key: "expiryDate", width: 12, value: (l) => (l.expiryDate ? { date: l.expiryDate } : t("licenses.perpetual")) },
+    ...(withCosts
+      ? [
+          { key: "cost", width: 12, value: (l: LicenseView) => (l.costMinor === null ? null : l.costMinor / 100) },
+          { key: "currency", width: 11, value: (l: LicenseView) => l.currency },
+        ]
+      : []),
+    { key: "notes", width: 30, value: (l) => l.notes },
+  ];
   return {
     name: sheetName,
-    headers: [
-      "name", "vendor", "kind", "billingPeriod", "seats", "seatsUsage", "purchaseDate", "expiryDate", "cost", "currency", "notes",
-    ].map((c) => t(`licenses.${c}`)),
-    widths: [28, 18, 15, 12, 13, 10, 12, 12, 12, 11, 30],
-    rows: rows.map((l) => [
-      l.name,
-      l.vendor,
-      t(`licenses.kinds.${l.kind}`),
-      l.billingPeriod ? t(`licenses.periods.${l.billingPeriod}`) : null,
-      l.seats ?? t("licenses.unlimited"),
-      l.usedSeats,
-      l.purchaseDate ? { date: l.purchaseDate } : null,
-      l.expiryDate ? { date: l.expiryDate } : t("licenses.perpetual"),
-      l.costMinor === null ? null : l.costMinor / 100,
-      l.currency,
-      l.notes,
-    ]),
+    headers: columns.map((c) => t(`licenses.${c.key}`)),
+    widths: columns.map((c) => c.width),
+    rows: rows.map((l) => columns.map((c) => c.value(l))),
   };
 }

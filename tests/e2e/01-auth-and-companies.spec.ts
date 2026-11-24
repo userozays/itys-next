@@ -69,11 +69,13 @@ test("admin adds two companies and a technician assigned to one of them", async 
   await dialog.getByLabel("Kullanıcı adı").fill(TECH.username);
   await dialog.getByLabel("Parola", { exact: true }).fill(TECH.password);
   await dialog.getByLabel("Akdeniz Lojistik").check();
+  await dialog.getByLabel("Lisans anahtarlarını görebilir").check();
   await dialog.getByRole("button", { name: "Kaydet" }).click();
   await expect(dialog).toBeHidden();
 
   const row = page.getByRole("row", { name: /tech\.ayse/ });
   await expect(row).toContainText("Teknisyen");
+  await expect(row).toContainText("Lisans anahtarlarını görebilir");
   await expect(row).toContainText("Akdeniz Lojistik");
   await expect(row).not.toContainText("Boğaziçi Tekstil");
   await signOut(page);

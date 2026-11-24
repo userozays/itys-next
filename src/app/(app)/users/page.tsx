@@ -48,7 +48,12 @@ export default async function UsersPage() {
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.username}</TableCell>
                 <TableCell>{u.name}</TableCell>
-                <TableCell>{t(`users.roles.${u.role}`)}</TableCell>
+                <TableCell>
+                  {t(`users.roles.${u.role}`)}
+                  {u.role === "technician" && u.canSeeLicenseKeys ? (
+                    <span className="block text-xs text-muted-foreground">{t("users.keyAccess")}</span>
+                  ) : null}
+                </TableCell>
                 <TableCell className="max-w-64 truncate text-muted-foreground">
                   {u.role === "admin"
                     ? t("users.allCompanies")

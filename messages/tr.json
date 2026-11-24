@@ -110,7 +110,7 @@
   },
   "users": {
     "title": "Kullanıcılar",
-    "description": "Yöneticiler tüm şirketleri görür; teknisyenler yalnızca atandıkları şirketleri.",
+    "description": "Yöneticiler tüm şirketleri görür; teknisyenler ve izleyiciler yalnızca atandıkları şirketleri.",
     "new": "Yeni kullanıcı",
     "edit": "Kullanıcıyı düzenle",
     "username": "Kullanıcı adı",
@@ -118,8 +118,16 @@
     "role": "Rol",
     "roles": {
       "admin": "Yönetici",
-      "technician": "Teknisyen"
+      "technician": "Teknisyen",
+      "viewer": "İzleyici"
     },
+    "roleHints": {
+      "admin": "Her şeyi yapar: lisans ve maliyetler, silme, kullanıcılar, şirketler, bildirimler.",
+      "technician": "Cihaz ve konum ekler, düzenler; lisansı cihaza atar. Lisans ekleyemez, maliyetleri göremez.",
+      "viewer": "Yalnızca görür ve dışa aktarır. Hiçbir şeyi değiştiremez; maliyetleri ve lisans anahtarlarını göremez."
+    },
+    "canSeeLicenseKeys": "Lisans anahtarlarını görebilir",
+    "keyAccess": "Lisans anahtarlarını görebilir",
     "companies": "Şirketler",
     "allCompanies": "Tümü",
     "noCompanies": "Atama yok",
@@ -337,6 +345,7 @@
     "clearKey": "Kayıtlı anahtarı sil",
     "showKey": "Anahtarı göster",
     "noKey": "Anahtar girilmemiş.",
+    "keyNotAllowed": "Anahtar kayıtlı. Görmek için yöneticiden yetki iste.",
     "expiryDate": "Bitiş tarihi",
     "perpetual": "Süresiz",
     "cost": "Maliyet",

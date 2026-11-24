@@ -7,7 +7,14 @@ export const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // seconds: absolute lifetime
 const IDLE_TIMEOUT = 7 * 24 * 60 * 60; // seconds without activity
 const TOUCH_INTERVAL = 60 * 60; // write last_seen_at at most hourly
 
-export type Actor = { id: number; username: string; name: string; role: Role };
+export type Actor = {
+  id: number;
+  username: string;
+  name: string;
+  role: Role;
+  /** Only ever true for a technician; see permissions.ts. */
+  canSeeLicenseKeys: boolean;
+};
 
 const seconds = (d: Date) => Math.floor(d.getTime() / 1000);
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -35,6 +42,7 @@ export function getSessionActor(db: Db, token: string | undefined, now = new Dat
       username: users.username,
       name: users.name,
       role: users.role,
+      canSeeLicenseKeys: users.canSeeLicenseKeys,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -48,7 +56,7 @@ export function getSessionActor(db: Db, token: string | undefined, now = new Dat
   if (t - row.lastSeenAt > TOUCH_INTERVAL) {
     db.update(sessions).set({ lastSeenAt: t }).where(eq(sessions.id, row.sessionId)).run();
   }
-  return { id: row.id, username: row.username, name: row.name, role: row.role };
+  return { id: row.id, username: row.username, name: row.name, role: row.role, canSeeLicenseKeys: row.canSeeLicenseKeys };
 }
 
 export function deleteSession(db: Db, token: string | undefined): void {

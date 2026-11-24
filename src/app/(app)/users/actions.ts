@@ -14,7 +14,12 @@ const resetInput = z.object({ password });
 export async function saveUserAction(form: FormData): Promise<FormState> {
   const actor = await requireActor();
   return runForm(async () => {
-    const shared = { name: text(form, "name"), role: text(form, "role"), companyIds: numbers(form, "companyIds") };
+    const shared = {
+      name: text(form, "name"),
+      role: text(form, "role"),
+      companyIds: numbers(form, "companyIds"),
+      canSeeLicenseKeys: checked(form, "canSeeLicenseKeys"),
+    };
     const id = Number(form.get("id"));
     if (id) {
       updateUser(getDb(), actor, id, userUpdateInput.parse({ ...shared, active: checked(form, "active") }));

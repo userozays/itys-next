@@ -1,4 +1,5 @@
 import { count, eq } from "drizzle-orm";
+import { assertCan, can } from "../auth/permissions";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, locations, type Location } from "../db/schema";
@@ -52,6 +53,7 @@ function assertNameFree(db: DbOrTx, companyId: number, name: string, excludeId?:
 }
 
 export function createLocation(db: DbOrTx, actor: Actor, companyId: number, input: LocationInput): Location {
+  assertCan(can.editInventory(actor));
   getCompany(db, actor, companyId);
   assertNameFree(db, companyId, input.name);
   try {
@@ -63,6 +65,7 @@ export function createLocation(db: DbOrTx, actor: Actor, companyId: number, inpu
 }
 
 export function renameLocation(db: Db, actor: Actor, locationId: number, input: LocationInput): Location {
+  assertCan(can.editInventory(actor));
   const current = getLocation(db, actor, locationId);
   assertNameFree(db, current.companyId, input.name, current.id);
   try {

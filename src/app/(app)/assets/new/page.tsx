@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { getActiveCompany, requireActor } from "@/server/auth/context";
+import { getActiveCompany, requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { listAssignees } from "@/server/services/assets";
 import { listLocations } from "@/server/services/locations";
@@ -13,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NewAssetPage() {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.editInventory);
   const company = await getActiveCompany(actor);
   if (!company) redirect("/assets");
   const t = await getTranslations("assets");

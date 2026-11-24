@@ -7,7 +7,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/dates";
-import { requireActor } from "@/server/auth/context";
+import { requireActorWho } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { AppError } from "@/server/errors";
 import { importFields } from "@/server/import/mapping";
@@ -22,7 +23,7 @@ const SHOWN_SKIPPED = 100;
 const SHOWN_SAMPLE = 5;
 
 export default async function ImportJobPage({ params }: PageProps<"/assets/import/[id]">) {
-  const actor = await requireActor();
+  const actor = await requireActorWho(can.editInventory);
   const t = await getTranslations();
   const locale = await getLocale();
   const db = getDb();

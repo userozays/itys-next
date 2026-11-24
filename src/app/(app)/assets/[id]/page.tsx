@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, todayIso } from "@/lib/dates";
 import { appOrigin, requireActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { assetLabelUrl, qrSvg } from "@/server/qr";
 import { devicesSharingIp } from "@/server/services/assets";
@@ -61,9 +62,11 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/assets/${asset.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-            {t("common.edit")}
-          </Link>
+          {can.editInventory(actor) ? (
+            <Link href={`/assets/${asset.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+              {t("common.edit")}
+            </Link>
+          ) : null}
           {actor.role === "admin" ? (
             <ConfirmDelete
               title={t("assets.deleteTitle")}
@@ -167,9 +170,11 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
             <div className="w-full max-w-64">
               <AssetLabel svg={qr} tag={asset.tag} name={asset.name} company={company.name} />
             </div>
-            <Link href={`/assets/labels?id=${asset.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              {t("assets.printLabels")}
-            </Link>
+            {can.editInventory(actor) ? (
+              <Link href={`/assets/labels?id=${asset.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {t("assets.printLabels")}
+              </Link>
+            ) : null}
           </CardContent>
         </Card>
         <Card>

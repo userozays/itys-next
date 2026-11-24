@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { todayIso } from "@/lib/dates";
 import { licenseFilterFromParams } from "@/lib/list-params";
 import { getActiveCompany, getActor } from "@/server/auth/context";
+import { can } from "@/server/auth/permissions";
 import { getDb } from "@/server/db/client";
 import { licenseSheet } from "@/server/export/rows";
 import { sheetResponse } from "@/server/export/sheet";
@@ -20,6 +21,6 @@ export async function GET(request: NextRequest) {
   const { q, expiry } = licenseFilterFromParams(params);
   const t = await getTranslations();
   const rows = listLicenses(getDb(), actor, company.id, q, expiry);
-  const sheet = licenseSheet(rows, t as (key: string) => string, t("licenses.title"));
+  const sheet = licenseSheet(rows, t as (key: string) => string, t("licenses.title"), can.seeCosts(actor));
   return sheetResponse(sheet, format, `${t("export.licensesFile")}-${company.name}-${todayIso()}`);
 }

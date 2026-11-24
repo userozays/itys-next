@@ -17,18 +17,25 @@ export async function addUser(
   db: Db,
   username: string,
   role: Role = "technician",
-  opts: { active?: boolean; companyIds?: number[] } = {},
+  opts: { active?: boolean; companyIds?: number[]; canSeeLicenseKeys?: boolean } = {},
 ): Promise<Actor> {
   cachedHash ??= hashPassword(PASSWORD);
   const row = db
     .insert(users)
-    .values({ username, name: username, passwordHash: await cachedHash, role, active: opts.active ?? true })
+    .values({
+      username,
+      name: username,
+      passwordHash: await cachedHash,
+      role,
+      active: opts.active ?? true,
+      canSeeLicenseKeys: opts.canSeeLicenseKeys ?? false,
+    })
     .returning()
     .get();
   for (const companyId of opts.companyIds ?? []) {
     db.insert(userCompanies).values({ userId: row.id, companyId }).run();
   }
-  return { id: row.id, username: row.username, name: row.name, role: row.role };
+  return { id: row.id, username: row.username, name: row.name, role: row.role, canSeeLicenseKeys: row.canSeeLicenseKeys };
 }
 
 export function addCompany(db: Db, name: string, active = true): number {

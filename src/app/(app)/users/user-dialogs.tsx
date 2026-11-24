@@ -16,7 +16,15 @@ import {
 import type { Role } from "@/server/db/schema";
 import { resetPasswordAction, saveUserAction } from "./actions";
 
-export type UserRow = { id: number; username: string; name: string; role: Role; active: boolean; companyIds: number[] };
+export type UserRow = {
+  id: number;
+  username: string;
+  name: string;
+  role: Role;
+  canSeeLicenseKeys: boolean;
+  active: boolean;
+  companyIds: number[];
+};
 type CompanyOption = { id: number; name: string; active: boolean };
 
 function Footer({ pending, onCancel }: { pending: boolean; onCancel: () => void }) {
@@ -91,10 +99,15 @@ export function UserDialog({
             onValueChange={(value) => setRole(value as Role)}
             options={[
               { value: "technician", label: t("users.roles.technician") },
+              { value: "viewer", label: t("users.roles.viewer") },
               { value: "admin", label: t("users.roles.admin") },
             ]}
           />
+          <p className="-mt-2 text-xs text-muted-foreground">{t(`users.roleHints.${role}`)}</p>
           {role === "technician" ? (
+            <CheckField name="canSeeLicenseKeys" label={t("users.canSeeLicenseKeys")} defaultChecked={user?.canSeeLicenseKeys} />
+          ) : null}
+          {role !== "admin" ? (
             <fieldset className="grid gap-2" aria-describedby={companyError ? "companyIds-error" : undefined}>
               <legend className="mb-1.5 text-sm font-medium">{t("users.companies")}</legend>
               {choices.length === 0 ? (

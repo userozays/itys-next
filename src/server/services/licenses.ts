@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/dates";
+import { assertCan, can } from "../auth/permissions";
 import type { Actor } from "../auth/sessions";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
 import type { Db, DbOrTx } from "../db/client";
@@ -54,6 +55,12 @@ const viewColumns = {
   updatedAt: licenses.updatedAt,
 };
 
+/** Costs are for admins only: for everyone else they are left out at the source. */
+function forActor(actor: Actor) {
+  const seesCosts = can.seeCosts(actor);
+  return (row: LicenseView): LicenseView => (seesCosts ? row : { ...row, costMinor: null });
+}
+
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export function listLicenses(
@@ -84,7 +91,8 @@ export function listLicenses(
       ),
     )
     .orderBy(trKey(licenses.name), asc(licenses.id))
-    .all();
+    .all()
+    .map(forActor(actor));
 }
 
 /** Loads a license only if the actor may access its company. */
@@ -92,7 +100,7 @@ export function getLicense(db: DbOrTx, actor: Actor, licenseId: number): License
   const row = db.select(viewColumns).from(licenses).where(eq(licenses.id, licenseId)).get();
   if (!row) throw new AppError("notFound");
   getCompany(db, actor, row.companyId);
-  return row;
+  return forActor(actor)(row);
 }
 
 function fields(input: LicenseInput) {
@@ -111,6 +119,7 @@ function fields(input: LicenseInput) {
 }
 
 export function createLicense(db: Db, actor: Actor, companyId: number, input: LicenseInput): LicenseView {
+  assertCan(can.manageLicenses(actor));
   getCompany(db, actor, companyId);
   const { id } = db
     .insert(licenses)
@@ -121,6 +130,7 @@ export function createLicense(db: Db, actor: Actor, companyId: number, input: Li
 }
 
 export function updateLicense(db: Db, actor: Actor, licenseId: number, input: LicenseInput): LicenseView {
+  assertCan(can.manageLicenses(actor));
   const current = getLicense(db, actor, licenseId);
   if (input.seats != null && input.seats < current.usedSeats) throw new AppError("seatsBelowUsage");
   // An empty key field means "leave the stored key alone".
@@ -139,8 +149,9 @@ export function deleteLicense(db: Db, actor: Actor, licenseId: number): void {
   db.delete(licenses).where(eq(licenses.id, current.id)).run();
 }
 
-/** Decrypts the product key for someone who may access the license's company. */
+/** Decrypts the product key for someone who may read keys and access the license's company. */
 export function revealLicenseKey(db: Db, actor: Actor, licenseId: number): string | null {
+  assertCan(can.seeLicenseKeys(actor));
   const current = getLicense(db, actor, licenseId);
   const row = db.select({ key: licenses.keyEncrypted }).from(licenses).where(eq(licenses.id, current.id)).get();
   return row?.key ? decryptSecret(row.key) : null;
@@ -166,11 +177,13 @@ export function listLicensesForAsset(db: Db, actor: Actor, assetId: number): Lic
     .innerJoin(licenses, eq(licenses.id, licenseAssignments.licenseId))
     .where(eq(licenseAssignments.assetId, asset.id))
     .orderBy(trKey(licenses.name), asc(licenses.id))
-    .all();
+    .all()
+    .map(forActor(actor));
 }
 
 /** Puts a license on a device of the same company, if a seat is free. */
 export function assignLicense(db: Db, actor: Actor, licenseId: number, assetId: number): void {
+  assertCan(can.editInventory(actor));
   db.transaction((tx) => {
     const license = getLicense(tx, actor, licenseId);
     if (!assetId) throw new AppError("chooseAsset");
@@ -195,6 +208,7 @@ export function assignLicense(db: Db, actor: Actor, licenseId: number, assetId: 
 }
 
 export function unassignLicense(db: Db, actor: Actor, licenseId: number, assetId: number): void {
+  assertCan(can.editInventory(actor));
   const license = getLicense(db, actor, licenseId);
   db.delete(licenseAssignments)
     .where(and(eq(licenseAssignments.licenseId, license.id), eq(licenseAssignments.assetId, assetId)))

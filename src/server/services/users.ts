@@ -11,9 +11,13 @@ export type UserListItem = {
   username: string;
   name: string;
   role: Role;
+  canSeeLicenseKeys: boolean;
   active: boolean;
   companyIds: number[];
 };
+
+/** The key exception exists for technicians only (admins always, viewers never). */
+const keyFlag = (role: Role, wanted: boolean | undefined) => role === "technician" && wanted === true;
 
 function assertAdmin(actor: Actor): void {
   if (actor.role !== "admin") throw new AppError("forbidden");
@@ -27,11 +31,11 @@ function setCompanies(db: DbOrTx, userId: number, role: Role, companyIds: number
   );
   const active = new Set(db.select({ id: companies.id }).from(companies).where(eq(companies.active, true)).all().map((r) => r.id));
   // New assignments only to active companies (QA D8); an existing one stays when its company is deactivated.
-  if (role === "technician" && companyIds.some((id) => !active.has(id) && !current.has(id))) throw new AppError("inactiveCompany");
+  if (role !== "admin" && companyIds.some((id) => !active.has(id) && !current.has(id))) throw new AppError("inactiveCompany");
 
   db.delete(userCompanies).where(eq(userCompanies.userId, userId)).run();
-  // Admins see every company, so assignments are only kept for technicians.
-  const unique = role === "technician" ? [...new Set(companyIds)] : [];
+  // Admins see every company, so assignments are only kept for the other roles.
+  const unique = role !== "admin" ? [...new Set(companyIds)] : [];
   if (unique.length > 0) {
     db.insert(userCompanies)
       .values(unique.map((companyId) => ({ userId, companyId })))
@@ -59,7 +63,14 @@ export async function createFirstAdmin(db: Db, input: FirstAdminInput): Promise<
 export function listUsers(db: Db, actor: Actor): UserListItem[] {
   assertAdmin(actor);
   const rows = db
-    .select({ id: users.id, username: users.username, name: users.name, role: users.role, active: users.active })
+    .select({
+      id: users.id,
+      username: users.username,
+      name: users.name,
+      role: users.role,
+      canSeeLicenseKeys: users.canSeeLicenseKeys,
+      active: users.active,
+    })
     .from(users)
     .orderBy(asc(users.username))
     .all();
@@ -77,7 +88,13 @@ export async function createUser(db: Db, actor: Actor, input: NewUserInput): Pro
     return db.transaction((tx) => {
       const { id } = tx
         .insert(users)
-        .values({ username: input.username, name: input.name, passwordHash, role: input.role })
+        .values({
+          username: input.username,
+          name: input.name,
+          passwordHash,
+          role: input.role,
+          canSeeLicenseKeys: keyFlag(input.role, input.canSeeLicenseKeys),
+        })
         .returning({ id: users.id })
         .get();
       setCompanies(tx, id, input.role, input.companyIds);
@@ -106,7 +123,7 @@ export function updateUser(db: Db, actor: Actor, userId: number, input: UserUpda
     }
 
     tx.update(users)
-      .set({ name: input.name, role: input.role, active: input.active })
+      .set({ name: input.name, role: input.role, active: input.active, canSeeLicenseKeys: keyFlag(input.role, input.canSeeLicenseKeys) })
       .where(eq(users.id, userId))
       .run();
     setCompanies(tx, userId, input.role, input.companyIds);

@@ -32,6 +32,13 @@ export async function requireAdmin(): Promise<Actor> {
   return actor;
 }
 
+/** For pages whose only purpose is a change the user may not make (forms, import). */
+export async function requireActorWho(allowed: (actor: Actor) => boolean): Promise<Actor> {
+  const actor = await requireActor();
+  if (!allowed(actor)) redirect("/");
+  return actor;
+}
+
 /** The company the user is working in; the cookie is only a preference and is
  *  re-checked against the user's access on every request. */
 export async function getActiveCompany(actor: Actor): Promise<Company | null> {

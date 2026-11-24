@@ -19,7 +19,8 @@ export const companies = sqliteTable("companies", {
   createdAt: createdAt(),
 });
 
-export const roles = ["admin", "technician"] as const;
+/** admin: everything. technician: field work, no license terms or costs. viewer: read-only. */
+export const roles = ["admin", "technician", "viewer"] as const;
 export type Role = (typeof roles)[number];
 
 export const users = sqliteTable("users", {
@@ -28,11 +29,13 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: roles }).notNull(),
+  /** The one exception to the role table: a technician who may read license keys. */
+  canSeeLicenseKeys: integer("can_see_license_keys", { mode: "boolean" }).notNull().default(false),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: createdAt(),
 });
 
-/** Which companies a technician may access. Admins access every company. */
+/** Which companies a technician or viewer may access. Admins access every company. */
 export const userCompanies = sqliteTable(
   "user_companies",
   {

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, like, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/dates";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { assertCan, can } from "../auth/permissions";
 import type { Actor } from "../auth/sessions";
 import type { Db, DbOrTx } from "../db/client";
 import { assets, assetStatuses, assetTypes, companies, locations, type Asset, type AssetStatus, type AssetType } from "../db/schema";
@@ -303,6 +304,7 @@ export function createAsset(
   input: AssetInput,
   source: "manual" | "import" = "manual",
 ): Asset {
+  assertCan(can.editInventory(actor));
   getCompany(db, actor, companyId);
   assertLocationInCompany(db, companyId, input.locationId);
   const conflicts = assetConflicts(db, companyId, input);
@@ -321,6 +323,7 @@ export function createAsset(
 
 /** The company of an asset never changes; it is taken from the stored record. */
 export function updateAsset(db: Db, actor: Actor, assetId: number, input: AssetInput): Asset {
+  assertCan(can.editInventory(actor));
   const current = getAsset(db, actor, assetId);
   assertLocationInCompany(db, current.companyId, input.locationId);
   const conflicts = assetConflicts(db, current.companyId, input, current.id);
@@ -395,6 +398,7 @@ export function listAssetsForLabels(
   companyId: number,
   filter: AssetFilter = {},
 ): { id: number; tag: string; name: string }[] {
+  assertCan(can.editInventory(actor));
   getCompany(db, actor, companyId);
   return db
     .select({ id: assets.id, tag: assets.tag, name: assets.name })
