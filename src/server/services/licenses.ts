@@ -3,9 +3,9 @@ import { addDaysIso, SOON_DAYS, todayIso, type ExpiryFilter } from "../../lib/da
 import type { Actor } from "../auth/sessions";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
 import type { Db, DbOrTx } from "../db/client";
-import { assets, licenseAssignments, licenses, type Currency } from "../db/schema";
+import { assets, licenseAssignments, licenses, type BillingPeriod, type Currency, type LicenseKind } from "../db/schema";
 import { AppError } from "../errors";
-import type { LicenseInput } from "../validation";
+import { licenseBillingPeriod, type LicenseInput } from "../validation";
 import { searchFold } from "../../lib/turkish";
 import { trFold, trKey } from "../db/turkish-sql";
 import { getAsset } from "./assets";
@@ -21,6 +21,9 @@ export type LicenseView = {
   usedSeats: number;
   hasKey: boolean;
   expiryDate: string | null;
+  kind: LicenseKind;
+  billingPeriod: BillingPeriod | null;
+  purchaseDate: string | null;
   costMinor: number | null;
   currency: Currency;
   notes: string | null;
@@ -41,6 +44,9 @@ const viewColumns = {
   usedSeats: sql<number>`(select count(*) from license_assignments la where la.license_id = "licenses"."id")`,
   hasKey: sql<number>`${licenses.keyEncrypted} is not null`.mapWith(Boolean),
   expiryDate: licenses.expiryDate,
+  kind: licenses.kind,
+  billingPeriod: licenses.billingPeriod,
+  purchaseDate: licenses.purchaseDate,
   costMinor: licenses.costMinor,
   currency: licenses.currency,
   notes: licenses.notes,
@@ -95,6 +101,9 @@ function fields(input: LicenseInput) {
     vendor: input.vendor ?? null,
     seats: input.seats ?? null,
     expiryDate: input.expiryDate ?? null,
+    kind: input.kind ?? "subscription",
+    billingPeriod: licenseBillingPeriod(input.kind ?? "subscription", input.billingPeriod),
+    purchaseDate: input.purchaseDate ?? null,
     costMinor: input.cost ?? null,
     currency: input.currency,
     notes: input.notes ?? null,
@@ -190,4 +199,52 @@ export function unassignLicense(db: Db, actor: Actor, licenseId: number, assetId
   db.delete(licenseAssignments)
     .where(and(eq(licenseAssignments.licenseId, license.id), eq(licenseAssignments.assetId, assetId)))
     .run();
+}
+
+/** Amounts per currency, in minor units. Currencies are never added together. */
+export type MoneyByCurrency = Partial<Record<Currency, number>>;
+
+export type LicenseSummary = {
+  count: number;
+  /** Seats used and available, over licenses with a seat limit. */
+  seatsUsed: number;
+  seatsTotal: number;
+  /** Licenses with no free seat left. */
+  fullCount: number;
+  /** Ending within SOON_DAYS (not yet ended). */
+  endingSoon: number;
+  /** What subscriptions cost per year: monthly × 12 plus yearly. */
+  yearlySubscriptions: MoneyByCurrency;
+  /** One-off prices of perpetual licenses. */
+  perpetualPurchases: MoneyByCurrency;
+};
+
+/** License figures for the dashboard (QA Ö6). */
+export function licenseSummary(db: Db, actor: Actor, companyId: number, today = todayIso()): LicenseSummary {
+  const rows = listLicenses(db, actor, companyId);
+  const soonLimit = addDaysIso(today, SOON_DAYS);
+  const add = (into: MoneyByCurrency, currency: Currency, minor: number) => {
+    into[currency] = (into[currency] ?? 0) + minor;
+  };
+  const summary: LicenseSummary = {
+    count: rows.length,
+    seatsUsed: 0,
+    seatsTotal: 0,
+    fullCount: 0,
+    endingSoon: 0,
+    yearlySubscriptions: {},
+    perpetualPurchases: {},
+  };
+  for (const l of rows) {
+    if (l.seats != null) {
+      summary.seatsUsed += Math.min(l.usedSeats, l.seats);
+      summary.seatsTotal += l.seats;
+      if (l.usedSeats >= l.seats) summary.fullCount += 1;
+    }
+    if (l.expiryDate && l.expiryDate >= today && l.expiryDate <= soonLimit) summary.endingSoon += 1;
+    if (l.costMinor == null) continue;
+    if (l.kind === "perpetual") add(summary.perpetualPurchases, l.currency, l.costMinor);
+    else add(summary.yearlySubscriptions, l.currency, l.billingPeriod === "monthly" ? l.costMinor * 12 : l.costMinor);
+  }
+  return summary;
 }

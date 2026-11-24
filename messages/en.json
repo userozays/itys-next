@@ -80,7 +80,19 @@
     "seeWarrantyExpired": "Devices whose warranty has ended",
     "seeLicensesSoon": "Licenses expiring soon",
     "seeLicensesExpired": "Expired licenses",
-    "activeAssets": "{count} active (excluding retired)"
+    "activeAssets": "{count} active (excluding retired)",
+    "licenseSummary": {
+      "title": "License summary",
+      "seats": "Seat usage",
+      "seatsValue": "{used} / {total}",
+      "seatsNone": "No license has a seat limit",
+      "full": "{count, plural, =0 {No full licenses} one {# license has no free seat} other {# licenses have no free seat}}",
+      "endingSoon": "Ending within 30 days",
+      "yearly": "Yearly subscription cost",
+      "perpetual": "Perpetual license purchases",
+      "none": "—",
+      "seeAll": "Go to licenses"
+    }
   },
   "companies": {
     "title": "Companies",
@@ -190,7 +202,8 @@
     "passwordHasUsername": "The password must not contain the username.",
     "passwordMismatch": "The two passwords do not match.",
     "technicianCompany": "Assign at least one company to a technician.",
-    "phone": "A phone number may only contain digits, spaces and + ( ) - . /"
+    "phone": "A phone number may only contain digits, spaces and + ( ) - . /",
+    "expiryBeforePurchase": "The end date cannot be before the purchase date."
   },
   "noCompany": {
     "title": "No current company",
@@ -357,7 +370,24 @@
     "chooseDevice": "Search or choose a device…",
     "noMatch": "No matching device.",
     "groupComputers": "Computers and servers",
-    "groupOther": "Other devices"
+    "groupOther": "Other devices",
+    "kind": "License type",
+    "kinds": {
+      "subscription": "Subscription",
+      "perpetual": "Perpetual license"
+    },
+    "billingPeriod": "Renewal period",
+    "periods": {
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "per": {
+      "monthly": "/ month",
+      "yearly": "/ year"
+    },
+    "purchaseDate": "Purchase date",
+    "costHint": "For a subscription the amount per period, for a perpetual license the one-off price.",
+    "expiryHint": "Renewal date for a subscription, end of support for a perpetual license. Leave empty if it does not end."
   },
   "import": {
     "title": "Import devices",

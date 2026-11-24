@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { isWeakPassword } from "../lib/password-strength";
 import { searchFold } from "../lib/turkish";
-import { assetStatuses, assetTypes, currencies, roles } from "./db/schema";
+import { assetStatuses, assetTypes, billingPeriods, currencies, licenseKinds, roles, type BillingPeriod, type LicenseKind } from "./db/schema";
 
 // Messages are translation keys under "validation.*".
 export const username = z
@@ -186,20 +186,39 @@ const optionalSeats = z
   .nullable()
   .optional();
 
-export const licenseInput = z.object({
-  name: z.string().trim().min(1, "required").max(120, "tooLong"),
-  vendor: optionalText(120),
-  seats: optionalSeats,
-  /** Empty or missing keeps the stored key; use clearKey to remove it. */
-  key: z.string().trim().max(2000, "tooLong").optional(),
-  clearKey: z.boolean().optional(),
-  expiryDate: optionalDate,
-  cost: optionalMoney,
-  currency: z.enum(currencies).default("TRY"),
-  notes: optionalText(2000),
-});
+/** A subscription without a period is taken as yearly; a perpetual license has none. */
+export function licenseBillingPeriod(kind: LicenseKind, period: BillingPeriod | null | undefined): BillingPeriod | null {
+  return kind === "subscription" ? (period ?? "yearly") : null;
+}
 
-export type LicenseInput = z.infer<typeof licenseInput>;
+export const licenseInput = z
+  .object({
+    name: z.string().trim().min(1, "required").max(120, "tooLong"),
+    vendor: optionalText(120),
+    seats: optionalSeats,
+    /** Empty or missing keeps the stored key; use clearKey to remove it. */
+    key: z.string().trim().max(2000, "tooLong").optional(),
+    clearKey: z.boolean().optional(),
+    kind: z.enum(licenseKinds).default("subscription"),
+    /** Only kept for subscriptions; a subscription without one is taken as yearly. */
+    billingPeriod: z.enum(billingPeriods).nullable().optional(),
+    purchaseDate: optionalDate,
+    expiryDate: optionalDate,
+    cost: optionalMoney,
+    currency: z.enum(currencies).default("TRY"),
+    notes: optionalText(2000),
+  })
+  .transform((v) => ({ ...v, billingPeriod: licenseBillingPeriod(v.kind, v.billingPeriod) }))
+  .refine((v) => !(v.purchaseDate && v.expiryDate && v.expiryDate < v.purchaseDate), {
+    path: ["expiryDate"],
+    message: "expiryBeforePurchase",
+  });
+
+/** Kind and period may be left out by callers other than the form (tests, demo data): subscription, yearly. */
+export type LicenseInput = Omit<z.infer<typeof licenseInput>, "kind" | "billingPeriod"> & {
+  kind?: LicenseKind;
+  billingPeriod?: BillingPeriod | null;
+};
 export type AssetInput = z.infer<typeof assetInput>;
 export type LocationInput = z.infer<typeof locationInput>;
 export type FirstAdminInput = z.infer<typeof firstAdminInput>;

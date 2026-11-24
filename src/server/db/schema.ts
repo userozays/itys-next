@@ -142,6 +142,12 @@ export const assets = sqliteTable(
 export const currencies = ["TRY", "USD", "EUR"] as const;
 export type Currency = (typeof currencies)[number];
 
+/** Subscription: paid every period. Perpetual: bought once (an expiry date then means end of support). */
+export const licenseKinds = ["subscription", "perpetual"] as const;
+export type LicenseKind = (typeof licenseKinds)[number];
+export const billingPeriods = ["monthly", "yearly"] as const;
+export type BillingPeriod = (typeof billingPeriods)[number];
+
 export const licenses = sqliteTable(
   "licenses",
   {
@@ -155,8 +161,12 @@ export const licenses = sqliteTable(
     seats: integer("seats"),
     /** Product key, encrypted with src/server/crypto/secrets.ts. Never sent to the browser unasked. */
     keyEncrypted: text("key_encrypted"),
-    expiryDate: text("expiry_date"), // YYYY-MM-DD; null means perpetual
-    /** Price in minor units (kuruş, cent). */
+    expiryDate: text("expiry_date"), // YYYY-MM-DD; null means it does not end
+    kind: text("kind", { enum: licenseKinds }).notNull().default("subscription"),
+    /** Only for subscriptions; the cost is per period. */
+    billingPeriod: text("billing_period", { enum: billingPeriods }),
+    purchaseDate: text("purchase_date"), // YYYY-MM-DD
+    /** Price in minor units (kuruş, cent): per billing period for a subscription, once for a perpetual license. */
     costMinor: integer("cost_minor"),
     currency: text("currency", { enum: currencies }).notNull().default("TRY"),
     notes: text("notes"),

@@ -94,7 +94,16 @@ export default async function LicensePage({ params }: PageProps<"/licenses/[id]"
               <Item label={t("licenses.expiryDate")}>
                 {license.expiryDate ? formatDate(license.expiryDate, locale) : t("licenses.perpetual")}
               </Item>
-              <Item label={t("licenses.cost")}>{formatMoney(license.costMinor, license.currency, locale)}</Item>
+              <Item label={t("licenses.kind")}>
+                {t(`licenses.kinds.${license.kind}`)}
+                {license.billingPeriod ? ` · ${t(`licenses.periods.${license.billingPeriod}`)}` : null}
+              </Item>
+              <Item label={t("licenses.purchaseDate")}>{license.purchaseDate ? formatDate(license.purchaseDate, locale) : null}</Item>
+              <Item label={t("licenses.cost")}>
+                {license.costMinor === null
+                  ? null
+                  : `${formatMoney(license.costMinor, license.currency, locale)}${license.billingPeriod ? ` ${t(`licenses.per.${license.billingPeriod}`)}` : ""}`}
+              </Item>
               <Item label={t("assets.updatedAt")}>{formatDate(license.updatedAt, locale)}</Item>
             </dl>
             {license.notes ? <p className="border-t pt-4 text-sm whitespace-pre-wrap">{license.notes}</p> : null}

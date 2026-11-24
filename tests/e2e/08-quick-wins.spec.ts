@@ -70,7 +70,7 @@ test("the license list downloads without license keys (QA Ö1)", async ({ page, 
   await page.getByRole("button", { name: "Dışa aktar" }).click();
   const [csv] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "CSV (.csv)" }).click()]);
   const text = await readFile((await csv.path())!, "utf8");
-  expect(text).toContain("Yazılım;Üretici;Koltuk sayısı");
+  expect(text).toContain("Yazılım;Üretici;Lisans tipi;Yenileme periyodu;Koltuk sayısı");
   expect(text).not.toContain("Lisans anahtarı");
 
   // Signed out, there is nothing to download.

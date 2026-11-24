@@ -6,12 +6,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveCompany, requireActor } from "@/server/auth/context";
 import { formatDate, todayIso } from "@/lib/dates";
+import { formatMoney } from "@/lib/money";
 import { getDb } from "@/server/db/client";
-import { assetStatuses, assetTypes } from "@/server/db/schema";
+import { assetStatuses, assetTypes, currencies } from "@/server/db/schema";
 import { upcomingExpiries } from "@/server/notify/expiry";
 import { assetSummary } from "@/server/services/assets";
 import { listCompanies } from "@/server/services/companies";
-import { listLicenses } from "@/server/services/licenses";
+import { licenseSummary, type LicenseSummary, type MoneyByCurrency } from "@/server/services/licenses";
 
 function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
   return (
@@ -21,6 +22,62 @@ function Stat({ label, value, note }: { label: string; value: string | number; n
         <CardTitle className="text-xl tabular-nums break-words sm:text-2xl">{value}</CardTitle>
         {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
       </CardHeader>
+    </Card>
+  );
+}
+
+/** Seat usage, licenses ending soon and what licenses cost, per currency (QA Ö6). */
+async function LicenseSummaryCard({ summary, locale }: { summary: LicenseSummary; locale: string }) {
+  const t = await getTranslations("dashboard.licenseSummary");
+  const money = (amounts: MoneyByCurrency) => {
+    const parts = currencies.filter((c) => amounts[c]).map((c) => formatMoney(amounts[c]!, c, locale));
+    return parts.length > 0 ? parts.join(" · ") : t("none");
+  };
+  const percent = summary.seatsTotal > 0 ? Math.round((summary.seatsUsed / summary.seatsTotal) * 100) : 0;
+  return (
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+        <CardTitle>{t("title")}</CardTitle>
+        <Link href="/licenses" className="text-sm underline underline-offset-4">
+          {t("seeAll")}
+        </Link>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid content-start gap-1">
+            <dt className="text-xs text-muted-foreground">{t("seats")}</dt>
+            {summary.seatsTotal > 0 ? (
+              <dd className="grid gap-1.5">
+                <span className="font-medium tabular-nums">
+                  {t("seatsValue", { used: summary.seatsUsed, total: summary.seatsTotal })} (%{percent})
+                </span>
+                <span className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+                  <span className="block h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+                </span>
+                <span className="text-xs text-muted-foreground">{t("full", { count: summary.fullCount })}</span>
+              </dd>
+            ) : (
+              <dd className="text-sm text-muted-foreground">{t("seatsNone")}</dd>
+            )}
+          </div>
+          <div className="grid content-start gap-1">
+            <dt className="text-xs text-muted-foreground">{t("endingSoon")}</dt>
+            <dd>
+              <Link href="/licenses?expiry=soon" className="font-medium tabular-nums underline-offset-4 hover:underline">
+                {summary.endingSoon}
+              </Link>
+            </dd>
+          </div>
+          <div className="grid content-start gap-1">
+            <dt className="text-xs text-muted-foreground">{t("yearly")}</dt>
+            <dd className="font-medium tabular-nums">{money(summary.yearlySubscriptions)}</dd>
+          </div>
+          <div className="grid content-start gap-1">
+            <dt className="text-xs text-muted-foreground">{t("perpetual")}</dt>
+            <dd className="font-medium tabular-nums">{money(summary.perpetualPurchases)}</dd>
+          </div>
+        </dl>
+      </CardContent>
     </Card>
   );
 }
@@ -59,6 +116,7 @@ export default async function DashboardPage() {
   const companyCount = listCompanies(db, actor).filter((c) => c.active).length;
   const isAdmin = actor.role === "admin";
   const summary = active ? assetSummary(db, actor, active.id) : null;
+  const licenses = active ? licenseSummary(db, actor, active.id) : null;
   const expiries = active ? upcomingExpiries(db, actor, active.id, todayIso()) : [];
   const tn = await getTranslations("notify");
   const locale = await getLocale();
@@ -74,7 +132,7 @@ export default async function DashboardPage() {
           value={summary?.total ?? 0}
           note={summary ? t("activeAssets", { count: summary.total - (summary.byStatus.retired ?? 0) }) : undefined}
         />
-        <Stat label={t("licenseCount")} value={active ? listLicenses(db, actor, active.id).length : 0} />
+        <Stat label={t("licenseCount")} value={licenses?.count ?? 0} />
         <Stat label={t("companyCount")} value={companyCount} />
       </div>
       {!summary ? (
@@ -109,6 +167,7 @@ export default async function DashboardPage() {
           />
         </div>
       )}
+      {licenses && licenses.count > 0 ? <LicenseSummaryCard summary={licenses} locale={locale} /> : null}
       {active ? (
         <Card>
           <CardHeader>

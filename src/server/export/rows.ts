@@ -46,13 +46,18 @@ export function assetSheet(rows: AssetListItem[], t: T, sheetName: string): Shee
 export function licenseSheet(rows: LicenseView[], t: T, sheetName: string): Sheet {
   return {
     name: sheetName,
-    headers: ["name", "vendor", "seats", "seatsUsage", "expiryDate", "cost", "currency", "notes"].map((c) => t(`licenses.${c}`)),
-    widths: [28, 18, 13, 10, 12, 12, 11, 30],
+    headers: [
+      "name", "vendor", "kind", "billingPeriod", "seats", "seatsUsage", "purchaseDate", "expiryDate", "cost", "currency", "notes",
+    ].map((c) => t(`licenses.${c}`)),
+    widths: [28, 18, 15, 12, 13, 10, 12, 12, 12, 11, 30],
     rows: rows.map((l) => [
       l.name,
       l.vendor,
+      t(`licenses.kinds.${l.kind}`),
+      l.billingPeriod ? t(`licenses.periods.${l.billingPeriod}`) : null,
       l.seats ?? t("licenses.unlimited"),
       l.usedSeats,
+      l.purchaseDate ? { date: l.purchaseDate } : null,
       l.expiryDate ? { date: l.expiryDate } : t("licenses.perpetual"),
       l.costMinor === null ? null : l.costMinor / 100,
       l.currency,

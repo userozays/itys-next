@@ -114,7 +114,9 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
                     <Link href={`/licenses/${l.id}`} className="underline-offset-4 hover:underline">
                       {l.name}
                     </Link>
-                    {l.vendor ? <span className="block text-xs font-normal text-muted-foreground">{l.vendor}</span> : null}
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {[l.vendor, t(`licenses.kinds.${l.kind}`)].filter(Boolean).join(" · ")}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <SeatUsage used={l.usedSeats} seats={l.seats} />
@@ -125,7 +127,12 @@ export default async function LicensesPage({ searchParams }: PageProps<"/license
                       <LicenseExpiryBadge end={l.expiryDate} today={today} />
                     </span>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatMoney(l.costMinor, l.currency, locale)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(l.costMinor, l.currency, locale)}
+                    {l.costMinor !== null && l.billingPeriod ? (
+                      <span className="ml-1 text-xs text-muted-foreground">{t(`licenses.per.${l.billingPeriod}`)}</span>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

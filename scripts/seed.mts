@@ -198,13 +198,20 @@ for (const spec of companySpecs) {
     const seats = template.perDevice ? Math.max(2, Math.ceil(users.length * (0.6 + random() * 0.6))) : chance(0.5) ? int(1, 5) : null;
     const roll = random();
     const expiryDays = roll < 0.15 ? int(-5, 29) : roll < 0.25 ? int(-200, -20) : roll < 0.9 ? int(40, 700) : null;
+    // No end date: a perpetual license. Otherwise a subscription, mostly yearly.
+    const kind = expiryDays === null ? ("perpetual" as const) : ("subscription" as const);
+    const billingPeriod = kind === "subscription" && chance(0.3) ? ("monthly" as const) : ("yearly" as const);
+    const yearlyCost = template.unit * (template.perDevice && seats ? seats : 1);
     const license = createLicense(db, admin, company.id, {
       name: template.name,
       vendor: template.vendor,
       seats,
       key: `DEMO-${template.vendor.slice(0, 4).toUpperCase()}-${int(1000, 9999)}-${int(1000, 9999)}-${int(1000, 9999)}`, // made up
+      kind,
+      billingPeriod,
+      purchaseDate: inDays(Math.min(expiryDays ?? 0, 0) - int(30, 700)),
       expiryDate: expiryDays === null ? null : inDays(expiryDays),
-      cost: template.unit * (template.perDevice && seats ? seats : 1),
+      cost: billingPeriod === "monthly" && kind === "subscription" ? Math.round(yearlyCost / 12) : yearlyCost,
       currency: template.currency,
     });
     licenseTotal++;

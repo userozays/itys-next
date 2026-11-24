@@ -2,10 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useState } from "react";
 import { CheckField, Field, FormError, SelectField, TextareaField, useFormAction } from "@/components/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { currencies } from "@/server/db/schema";
+import { billingPeriods, currencies, licenseKinds } from "@/server/db/schema";
 import { saveLicenseAction } from "./actions";
 
 export type LicenseFormValues = {
@@ -15,6 +16,9 @@ export type LicenseFormValues = {
   seats: number | null;
   hasKey: boolean;
   expiryDate: string | null;
+  kind: string;
+  billingPeriod: string | null;
+  purchaseDate: string | null;
   /** Already formatted for the input, e.g. "1250,50". */
   cost: string;
   currency: string;
@@ -24,6 +28,8 @@ export type LicenseFormValues = {
 export function LicenseForm({ license }: { license?: LicenseFormValues }) {
   const t = useTranslations();
   const { state, pending, onSubmit } = useFormAction(saveLicenseAction);
+  // The renewal period only means something for a subscription.
+  const [kind, setKind] = useState(license?.kind ?? "subscription");
 
   return (
     <form method="post" onSubmit={onSubmit} className="grid gap-4">
@@ -45,8 +51,42 @@ export function LicenseForm({ license }: { license?: LicenseFormValues }) {
             defaultValue={license?.seats ?? ""}
             inputMode="numeric"
           />
-          <Field name="expiryDate" label={t("licenses.expiryDate")} state={state} type="date" defaultValue={license?.expiryDate ?? ""} />
-          <Field name="cost" label={t("licenses.cost")} state={state} defaultValue={license?.cost ?? ""} inputMode="decimal" />
+          <SelectField
+            name="kind"
+            label={t("licenses.kind")}
+            state={state}
+            defaultValue={kind}
+            onValueChange={setKind}
+            options={licenseKinds.map((k) => ({ value: k, label: t(`licenses.kinds.${k}`) }))}
+          />
+          {kind === "subscription" ? (
+            <SelectField
+              name="billingPeriod"
+              label={t("licenses.billingPeriod")}
+              state={state}
+              defaultValue={license?.billingPeriod ?? "yearly"}
+              options={billingPeriods.map((p) => ({ value: p, label: t(`licenses.periods.${p}`) }))}
+            />
+          ) : (
+            <div className="hidden sm:block" />
+          )}
+          <Field name="purchaseDate" label={t("licenses.purchaseDate")} state={state} type="date" defaultValue={license?.purchaseDate ?? ""} />
+          <Field
+            name="expiryDate"
+            label={t("licenses.expiryDate")}
+            hint={t("licenses.expiryHint")}
+            state={state}
+            type="date"
+            defaultValue={license?.expiryDate ?? ""}
+          />
+          <Field
+            name="cost"
+            label={t("licenses.cost")}
+            hint={t("licenses.costHint")}
+            state={state}
+            defaultValue={license?.cost ?? ""}
+            inputMode="decimal"
+          />
           <SelectField
             name="currency"
             label={t("licenses.currency")}

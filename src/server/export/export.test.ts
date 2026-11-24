@@ -117,6 +117,6 @@ describe("license export (QA Ö1)", () => {
     const sheet = licenseSheet(listLicenses(db, admin, a), t, "Lisanslar");
     expect(sheet.headers).not.toContain(t("licenses.key"));
     expect(JSON.stringify(sheet.rows)).not.toContain("SECRET-KEY-123");
-    expect(sheet.rows[0]).toEqual(["Office", null, 5, 0, "Süresiz", 1250.5, "TRY", null]);
+    expect(sheet.rows[0]).toEqual(["Office", null, "Abonelik", "Yıllık", 5, 0, null, "Süresiz", 1250.5, "TRY", null]);
   });
 });

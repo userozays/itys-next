@@ -80,7 +80,19 @@
     "seeWarrantyExpired": "Garantisi biten cihazlar",
     "seeLicensesSoon": "Süresi dolmak üzere olan lisanslar",
     "seeLicensesExpired": "Süresi dolan lisanslar",
-    "activeAssets": "{count} aktif (hurda hariç)"
+    "activeAssets": "{count} aktif (hurda hariç)",
+    "licenseSummary": {
+      "title": "Lisans özeti",
+      "seats": "Koltuk kullanımı",
+      "seatsValue": "{used} / {total}",
+      "seatsNone": "Koltuk sınırı olan lisans yok",
+      "full": "{count, plural, =0 {Dolu lisans yok} other {# lisansta boş koltuk yok}}",
+      "endingSoon": "30 gün içinde biten",
+      "yearly": "Yıllık abonelik maliyeti",
+      "perpetual": "Kalıcı lisans alımları",
+      "none": "—",
+      "seeAll": "Lisanslara git"
+    }
   },
   "companies": {
     "title": "Şirketler",
@@ -190,7 +202,8 @@
     "passwordHasUsername": "Parola kullanıcı adını içermemeli.",
     "passwordMismatch": "İki parola aynı değil.",
     "technicianCompany": "Teknisyene en az bir şirket ata.",
-    "phone": "Telefon yalnızca rakam, boşluk ve + ( ) - . / içerebilir."
+    "phone": "Telefon yalnızca rakam, boşluk ve + ( ) - . / içerebilir.",
+    "expiryBeforePurchase": "Bitiş tarihi alım tarihinden önce olamaz."
   },
   "noCompany": {
     "title": "Çalışılan şirket yok",
@@ -357,7 +370,24 @@
     "chooseDevice": "Cihaz ara ya da seç…",
     "noMatch": "Eşleşen cihaz yok.",
     "groupComputers": "Bilgisayar ve sunucular",
-    "groupOther": "Diğer cihazlar"
+    "groupOther": "Diğer cihazlar",
+    "kind": "Lisans tipi",
+    "kinds": {
+      "subscription": "Abonelik",
+      "perpetual": "Kalıcı lisans"
+    },
+    "billingPeriod": "Yenileme periyodu",
+    "periods": {
+      "monthly": "Aylık",
+      "yearly": "Yıllık"
+    },
+    "per": {
+      "monthly": "/ ay",
+      "yearly": "/ yıl"
+    },
+    "purchaseDate": "Alım tarihi",
+    "costHint": "Abonelikte her dönemin tutarı, kalıcı lisansta bir kerelik alım tutarı.",
+    "expiryHint": "Abonelikte yenileme tarihi, kalıcı lisansta destek bitişi. Boş bırakırsan süresiz sayılır."
   },
   "import": {
     "title": "Cihazları içe aktar",
